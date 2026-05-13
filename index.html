@@ -356,6 +356,15 @@
     try {
       const txt = await fetchCSV(url);
       const { hdrs, rows } = parseCSV(txt);
+
+      const validation = validateColumns(hdrs);
+      if (!validation.valid) {
+        document.getElementById('msg').textContent = validation.error;
+        document.getElementById('msg').className = 'msg err';
+        setStatus(false, 'Connection failed');
+        return;
+      }
+
       const orders = rows.filter((r) => Object.values(r).some((v) => v));
       if (!orders.length) {
         setMsg('Connected but no rows found. Add data below the header row.', 'err');
@@ -371,12 +380,38 @@
     }
   }
 
+  function validateColumns(headers) {
+    const required = ['customer name', 'status'];
+    const found = headers.map(h => h.toLowerCase().trim());
+
+    const missing = required.filter(col =>
+      !found.some(h => h.includes(col.split(' ')[0]))
+    );
+
+    if (missing.length > 0) {
+      return {
+        valid: false,
+        error: 'Missing required columns: ' + missing.join(', ') + '. Your sheet must have at least "Customer Name" and "Status" columns.'
+      };
+    }
+
+    return { valid: true };
+  }
+
   async function doPreview() {
     const url = fixURL(document.getElementById('sheet-url').value.trim() || localStorage.getItem(KEY) || DEFAULT);
     setMsg('Loading…', '');
     try {
       const txt = await fetchCSV(url);
       const { hdrs, rows } = parseCSV(txt);
+
+      const validation = validateColumns(hdrs);
+      if (!validation.valid) {
+        document.getElementById('msg').textContent = validation.error;
+        document.getElementById('msg').className = 'msg err';
+        return;
+      }
+
       setMsg(`Loaded ${rows.filter((r) => Object.values(r).some((v) => v)).length} rows.`, 'ok');
       showPreview(hdrs, rows);
     } catch (e) {
