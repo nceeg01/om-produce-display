@@ -48,7 +48,8 @@
     .sec-title::after { content:''; flex:1; height:1px; background:var(--border); }
 
     /* TV CARDS */
-    .tv-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:36px; }
+    html { font-size: clamp(14px, 1.2vw, 18px); }
+    .tv-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:36px; }
     .tv-card { display:block; text-decoration:none; color:var(--text); background:#fff; border:1px solid var(--border); border-radius:8px; padding:20px 24px; transition:all .2s; }
     .tv-card:hover { border-color:var(--orange); box-shadow:0 2px 12px rgba(232,113,26,.12); }
     .tv-card .icon { font-size:26px; margin-bottom:10px; }
@@ -129,6 +130,13 @@
     code { background:var(--surface2); border:1px solid var(--border); padding:2px 7px; border-radius:3px; font-size:12px; color:var(--orange); font-family:monospace; }
     .reset-note { background:var(--olive-l); border:1px solid var(--olive-m); border-radius:6px; padding:14px 16px; font-size:13px; color:var(--olive); line-height:1.6; margin-top:20px; }
     .reset-note strong { color:#2D5010; }
+    @media (max-width: 720px) {
+      .page { padding: 20px 12px; }
+      .logo-nm { font-size:16px; }
+      .tv-card .label { font-size:16px; }
+      .tv-grid { grid-template-columns: 1fr; }
+      table { font-size:12px; }
+    }
   </style>
 </head>
 <body>
@@ -221,73 +229,206 @@
   </div>
 
 <script>
-const KEY='om_produce_sheet_url';
-const DEFAULT='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
+  const KEY = 'om_produce_sheet_url';
+  const DEFAULT =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
 
-function fixURL(raw){const u=(raw||'').trim();if(!u)return DEFAULT;if(u.includes('output=csv'))return u;const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);if(m){const g=(u.match(/[#&?]gid=(\d+)/)||[])[1]||'0';return`https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;}return u;}
-function isHTML(t){const s=t.trim();return s.startsWith('<!')||s.startsWith('<html');}
-function parseCSV(txt){
-  const lines=txt.split('\n');
-  function sr(l){const v=[];let c='',q=0;for(const ch of l){if(ch==='"'){q=1-q;}else if(ch===','&&!q){v.push(c.replace(/^"|"$/g,'').trim());c='';}else c+=ch;}v.push(c.replace(/^"|"$/g,'').trim());return v;}
-  let hi=0;for(let i=0;i<Math.min(5,lines.length);i++){if(sr(lines[i]).some(v=>v&&!/^\d+$/.test(v))){hi=i;break;}}
-  const hdrs=sr(lines[hi]).map(h=>h.replace(/"/g,'').trim());
-  const rows=[];for(let i=hi+1;i<lines.length;i++){if(!lines[i].trim())continue;const vs=sr(lines[i]);if(vs.every(v=>!v))continue;const row={};hdrs.forEach((h,j)=>row[h]=(vs[j]||'').trim());rows.push(row);}
-  return{hdrs,rows};
-}
-function normSt(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('complete'))return'dn';return'np';}
-function sbadge(v){const s=normSt(v);const m={np:['sbp sbp-np','Not Pulled'],proc:['sbp sbp-proc','Processing'],rd:['sbp sbp-rd','Ready'],dn:['sbp sbp-dn','Done']};const[c,l]=m[s];return`<span class="${c}">${l}</span>`;}
+  function fixURL(raw) {
+    const u = (raw || '').trim();
+    if (!u) return DEFAULT;
+    if (u.includes('output=csv')) return u;
+    const m = u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) {
+      const g = (u.match(/[#&?]gid=(\d+)/) || [])[1] || '0';
+      return `https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;
+    }
+    return u;
+  }
 
-function init(){
-  const saved=localStorage.getItem(KEY)||DEFAULT;
-  document.getElementById('sheet-url').value=saved;
-  if(saved)setStatus(true,'Connected — using configured sheet');
-}
-function setStatus(ok,txt){
-  const bar=document.getElementById('status-bar');
-  bar.className='status-bar '+(ok?'sb-ok':'sb-err');
-  document.getElementById('sdot').className='sdot '+(ok?'sdot-g':'sdot-r');
-  document.getElementById('status-txt').textContent=txt;
-}
-function setMsg(t,c){const el=document.getElementById('msg');el.textContent=t;el.className='msg '+(c||'');}
+  function isHTML(t) {
+    const s = t.trim();
+    return s.startsWith('<!') || s.startsWith('<html');
+  }
 
-async function fetchCSV(url){
-  const r=await fetch(url);
-  if(!r.ok)throw new Error('HTTP '+r.status+' — is the sheet published publicly?');
-  const t=await r.text();
-  if(isHTML(t))throw new Error('Got a webpage. Use File → Share → Publish to web → CSV in Google Sheets.');
-  return t;
-}
-async function saveTest(){
-  const raw=document.getElementById('sheet-url').value.trim()||DEFAULT;
-  const url=fixURL(raw);
-  if(url!==raw.trim())document.getElementById('sheet-url').value=url;
-  setMsg('Testing…','');
-  try{
-    const txt=await fetchCSV(url);
-    const{hdrs,rows}=parseCSV(txt);
-    const orders=rows.filter(r=>Object.values(r).some(v=>v));
-    if(!orders.length){setMsg('Connected but no rows found. Add data below the header row.','err');return;}
-    localStorage.setItem(KEY,url);
-    setStatus(true,`Connected — ${orders.length} order(s) found`);
-    setMsg(`✓ Saved. Found ${orders.length} rows. TV screens updated.`,'ok');
-    showPreview(hdrs,rows);
-  }catch(e){setMsg(e.message,'err');setStatus(false,'Connection failed');}
-}
-async function doPreview(){
-  const url=fixURL(document.getElementById('sheet-url').value.trim()||localStorage.getItem(KEY)||DEFAULT);
-  setMsg('Loading…','');
-  try{const txt=await fetchCSV(url);const{hdrs,rows}=parseCSV(txt);setMsg(`Loaded ${rows.filter(r=>Object.values(r).some(v=>v)).length} rows.`,'ok');showPreview(hdrs,rows);}
-  catch(e){setMsg(e.message,'err');}
-}
-function showPreview(hdrs,rows){
-  document.getElementById('prev-wrap').style.display='block';
-  document.getElementById('prv-hdr').innerHTML=hdrs.map(h=>`<th>${h}</th>`).join('');
-  const cSt=hdrs.find(h=>h.toLowerCase().includes('status'));
-  document.getElementById('prv-bdy').innerHTML=rows.filter(r=>Object.values(r).some(v=>v)).slice(0,10).map(row=>`<tr>${hdrs.map(h=>`<td>${cSt&&h===cSt?sbadge(row[h]||''):(row[h]||'')}</td>`).join('')}</tr>`).join('');
-  document.getElementById('col-info').textContent=`Columns detected: ${hdrs.join(' · ')}`;
-}
-function clearCfg(){localStorage.removeItem(KEY);document.getElementById('sheet-url').value='';document.getElementById('prev-wrap').style.display='none';setStatus(false,'Not connected');setMsg('Cleared.','');}
-init();
+  function parseCSV(txt) {
+    const lines = txt.split('\n');
+
+    function sr(l) {
+      const v = [];
+      let c = '';
+      let q = 0;
+      for (const ch of l) {
+        if (ch === '"') {
+          q = 1 - q;
+        } else if (ch === ',' && !q) {
+          v.push(c.replace(/^"|"$/g, '').trim());
+          c = '';
+        } else {
+          c += ch;
+        }
+      }
+      v.push(c.replace(/^"|"$/g, '').trim());
+      return v;
+    }
+
+    let hi = 0;
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      if (sr(lines[i]).some((v) => v && !/^\d+$/.test(v))) {
+        hi = i;
+        break;
+      }
+    }
+
+    const hdrs = sr(lines[hi]).map((h) => h.replace(/"/g, '').trim());
+    const rows = [];
+
+    for (let i = hi + 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vs = sr(lines[i]);
+      if (vs.every((v) => !v)) continue;
+      const row = {};
+      hdrs.forEach((h, j) => (row[h] = (vs[j] || '').trim()));
+      rows.push(row);
+    }
+
+    return { hdrs, rows };
+  }
+
+  function normSt(v) {
+    if (!v) return 'np';
+    const s = v.toLowerCase();
+    if (s.includes('not') || s.includes('unpull')) return 'np';
+    if (s.includes('process') || s.includes('pull')) return 'proc';
+    if (s.includes('ready')) return 'rd';
+    if (s.includes('done') || s.includes('pick') || s.includes('complete')) return 'dn';
+    return 'np';
+  }
+
+  function sbadge(v) {
+    const s = normSt(v);
+    const m = {
+      np: ['sbp sbp-np', 'Not Pulled'],
+      proc: ['sbp sbp-proc', 'Processing'],
+      rd: ['sbp sbp-rd', 'Ready'],
+      dn: ['sbp sbp-dn', 'Done'],
+    };
+    const [c, l] = m[s] || m.np;
+    const el = document.createElement('span');
+    el.className = c;
+    el.textContent = l;
+    return el;
+  }
+
+  function init() {
+    const saved = localStorage.getItem(KEY) || DEFAULT;
+    document.getElementById('sheet-url').value = saved;
+    if (saved) setStatus(true, 'Connected — using configured sheet');
+  }
+
+  function setStatus(ok, txt) {
+    const bar = document.getElementById('status-bar');
+    bar.className = 'status-bar ' + (ok ? 'sb-ok' : 'sb-err');
+    document.getElementById('sdot').className = 'sdot ' + (ok ? 'sdot-g' : 'sdot-r');
+    document.getElementById('status-txt').textContent = txt;
+  }
+
+  function setMsg(t, c) {
+    const el = document.getElementById('msg');
+    el.textContent = t;
+    el.className = 'msg ' + (c || '');
+  }
+
+  async function fetchCSV(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' — is the sheet published publicly?');
+    const t = await r.text();
+    if (isHTML(t))
+      throw new Error('Got a webpage. Use File → Share → Publish to web → CSV in Google Sheets.');
+    return t;
+  }
+
+  async function saveTest() {
+    const raw = document.getElementById('sheet-url').value.trim() || DEFAULT;
+    const url = fixURL(raw);
+    if (url !== raw.trim()) document.getElementById('sheet-url').value = url;
+    setMsg('Testing…', '');
+
+    try {
+      const txt = await fetchCSV(url);
+      const { hdrs, rows } = parseCSV(txt);
+      const orders = rows.filter((r) => Object.values(r).some((v) => v));
+      if (!orders.length) {
+        setMsg('Connected but no rows found. Add data below the header row.', 'err');
+        return;
+      }
+      localStorage.setItem(KEY, url);
+      setStatus(true, `Connected — ${orders.length} order(s) found`);
+      setMsg(`✓ Saved. Found ${orders.length} rows. TV screens updated.`, 'ok');
+      showPreview(hdrs, rows);
+    } catch (e) {
+      setMsg(e.message, 'err');
+      setStatus(false, 'Connection failed');
+    }
+  }
+
+  async function doPreview() {
+    const url = fixURL(document.getElementById('sheet-url').value.trim() || localStorage.getItem(KEY) || DEFAULT);
+    setMsg('Loading…', '');
+    try {
+      const txt = await fetchCSV(url);
+      const { hdrs, rows } = parseCSV(txt);
+      setMsg(`Loaded ${rows.filter((r) => Object.values(r).some((v) => v)).length} rows.`, 'ok');
+      showPreview(hdrs, rows);
+    } catch (e) {
+      setMsg(e.message, 'err');
+    }
+  }
+
+  function showPreview(hdrs, rows) {
+    const wrap = document.getElementById('prev-wrap');
+    wrap.style.display = 'block';
+
+    const theadRow = document.getElementById('prv-hdr');
+    theadRow.innerHTML = '';
+    hdrs.forEach((h) => {
+      const th = document.createElement('th');
+      th.textContent = h;
+      theadRow.appendChild(th);
+    });
+
+    const tbody = document.getElementById('prv-bdy');
+    tbody.innerHTML = '';
+    const cSt = hdrs.find((h) => h.toLowerCase().includes('status'));
+    rows
+      .filter((r) => Object.values(r).some((v) => v))
+      .slice(0, 10)
+      .forEach((row) => {
+        const tr = document.createElement('tr');
+        hdrs.forEach((h) => {
+          const td = document.createElement('td');
+          if (cSt && h === cSt) {
+            const badge = sbadge(row[h] || '');
+            td.appendChild(badge);
+          } else {
+            td.textContent = row[h] || '';
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+    document.getElementById('col-info').textContent = `Columns detected: ${hdrs.join(' · ')}`;
+  }
+
+  function clearCfg() {
+    localStorage.removeItem(KEY);
+    document.getElementById('sheet-url').value = '';
+    document.getElementById('prev-wrap').style.display = 'none';
+    setStatus(false, 'Not connected');
+    setMsg('Cleared.', '');
+  }
+
+  init();
 </script>
 </body>
 </html>

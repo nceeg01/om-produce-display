@@ -7,20 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg:       #FFFFFF;
-      --surface:  #FAFAF8;
-      --surface2: #F3F0EC;
-      --border:   #E8E2DA;
-      --border2:  #D5CEC4;
-      --text:     #1C1710;
-      --muted:    #9A8B78;
-      --muted2:   #C4B8A8;
-      --orange:   #E8711A;
-      --orange-l: #FFF3EA;
-      --orange-m: #FDE0C4;
-      --olive:    #4A7A20;
-      --olive-l:  #EEF7E5;
       --olive-m:  #C8E6A8;
       --red:      #C0321E;
       --red-l:    #FFF0EE;
@@ -137,6 +123,22 @@
     .ov-btn:hover { filter:brightness(1.05); }
     .ov-err { margin-top:10px; font-size:12px; color:var(--red); min-height:16px; }
   </style>
+  <style>
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+      .ns { padding: 20px 24px; }
+      .qitem { padding: 12px 18px; }
+      .hdr { padding: 0 16px; }
+      .hdr-clock { font-size: 26px; }
+      .logo-n { font-size:18px; }
+    }
+    @media (max-width: 480px) {
+      html { font-size: 14px; }
+      .ns-eyebrow { font-size: 12px; }
+      .ns-ready-tag { font-size: 16px; padding:8px 18px; }
+      .qname { font-size: 22px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -215,30 +217,82 @@ function fc(hdrs,...ks){for(const k of ks){const f=hdrs.find(h=>h.toLowerCase().
 function ns(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('collect')||s.includes('complete'))return'dn';return'np';}
 
 function renderServing(o){
-  const el=document.getElementById('ns-content');
-  if(!o){el.innerHTML=`<div class="ns-empty"><div class="eicon">⏰</div><h2>No Orders Ready</h2><p>Orders appear here when marked Ready</p></div>`;prevName='';return;}
-  const changed=prevName!==o.name;prevName=o.name;
-  el.innerHTML=`<div id="ns-name" class="${changed?'pop':''}">${o.name.toUpperCase()}</div><div id="ns-meta">${o.inv?`<div class="ns-pill np-inv">${o.inv}</div>`:''}${o.boxes?`<div class="ns-pill np-box">📦 ${o.boxes} Boxes</div>`:''}</div><div class="ns-ready-tag">✓ Ready for Pickup</div>`;
+  const el = document.getElementById('ns-content');
+  el.innerHTML = '';
+  if (!o) {
+    const empty = document.createElement('div');
+    empty.className = 'ns-empty';
+    const ico = document.createElement('div'); ico.className = 'eicon'; ico.textContent = '⏰';
+    const h2 = document.createElement('h2'); h2.textContent = 'No Orders Ready';
+    const p = document.createElement('p'); p.textContent = 'Orders appear here when marked Ready';
+    empty.appendChild(ico); empty.appendChild(h2); empty.appendChild(p);
+    el.appendChild(empty);
+    prevName = '';
+    return;
+  }
+  const changed = prevName !== o.name;
+  prevName = o.name;
+  const nameEl = document.createElement('div');
+  nameEl.id = 'ns-name';
+  if (changed) nameEl.classList.add('pop');
+  nameEl.textContent = (o.name || '').toUpperCase();
+
+  const meta = document.createElement('div'); meta.id = 'ns-meta';
+  if (o.inv) {
+    const inv = document.createElement('div'); inv.className = 'ns-pill np-inv'; inv.textContent = o.inv; meta.appendChild(inv);
+  }
+  if (o.boxes) {
+    const bx = document.createElement('div'); bx.className = 'ns-pill np-box'; bx.textContent = `📦 ${o.boxes} Boxes`; meta.appendChild(bx);
+  }
+
+  const tag = document.createElement('div'); tag.className = 'ns-ready-tag'; tag.textContent = '✓ Ready for Pickup';
+  el.appendChild(nameEl); el.appendChild(meta); el.appendChild(tag);
 }
 
-function qrow(o,pos,tclass,tlabel,dimmed=false){
-  return`<div class="qitem ${dimmed?'dimmed':''}"><div class="qpos">${pos||'—'}</div><div class="qinfo"><div class="qname">${o.name}</div><div class="qsub">${o.inv?`<span class="qinv">${o.inv}</span>`:''}${o.boxes?`<span class="qboxes">📦 ${o.boxes}</span>`:''}${tclass?`<span class="qstag ${tclass}">${tlabel}</span>`:''}</div></div></div>`;
+function createQItem(o, pos, tclass, tlabel, dimmed = false){
+  const item = document.createElement('div'); item.className = 'qitem' + (dimmed ? ' dimmed' : '');
+  const qpos = document.createElement('div'); qpos.className = 'qpos'; qpos.textContent = pos || '—';
+  const qinfo = document.createElement('div'); qinfo.className = 'qinfo';
+  const qname = document.createElement('div'); qname.className = 'qname'; qname.textContent = o.name || '';
+  const qsub = document.createElement('div'); qsub.className = 'qsub';
+  if (o.inv) { const inv = document.createElement('span'); inv.className = 'qinv'; inv.textContent = o.inv; qsub.appendChild(inv); }
+  if (o.boxes) { const bx = document.createElement('span'); bx.className = 'qboxes'; bx.textContent = `📦 ${o.boxes}`; qsub.appendChild(bx); }
+  if (tclass) { const stag = document.createElement('span'); stag.className = 'qstag ' + tclass; stag.textContent = tlabel; qsub.appendChild(stag); }
+  qinfo.appendChild(qname); qinfo.appendChild(qsub);
+  item.appendChild(qpos); item.appendChild(qinfo);
+  return item;
 }
 
 function renderQueue(all){
-  const ready=all.filter(o=>o.status==='rd');
-  const proc=all.filter(o=>o.status==='proc');
-  const np=all.filter(o=>o.status==='np');
-  const done=all.filter(o=>o.status==='dn');
-  document.getElementById('qcnt').textContent=ready.length+proc.length+np.length;
-  document.getElementById('q-sum').textContent=`${ready.length} of ${all.length} ready`;
-  let html='';
-  if(ready.length>1){html+=`<div class="sec-hdr">Ready — Waiting</div>`;html+=ready.slice(1).map((o,i)=>qrow(o,i+2,'','')).join('');}
-  if(proc.length){html+=`<div class="sec-hdr">Being Processed</div>`;html+=proc.map(o=>qrow(o,null,'qt-proc','Processing')).join('');}
-  if(np.length){html+=`<div class="sec-hdr">Not Pulled Yet</div>`;html+=np.map(o=>qrow(o,null,'qt-np','Not Pulled')).join('');}
-  if(done.length){html+=`<div class="sec-hdr">Picked Up — Done</div>`;html+=done.map(o=>qrow(o,null,'qt-dn','Done',true)).join('');}
-  if(!html)html=`<div class="qempty">No orders in queue.<br>Add orders to your Google Sheet to begin.</div>`;
-  document.getElementById('qlist').innerHTML=html;
+  const ready = all.filter((o) => o.status === 'rd');
+  const proc = all.filter((o) => o.status === 'proc');
+  const np = all.filter((o) => o.status === 'np');
+  const done = all.filter((o) => o.status === 'dn');
+  document.getElementById('qcnt').textContent = ready.length + proc.length + np.length;
+  document.getElementById('q-sum').textContent = `${ready.length} of ${all.length} ready`;
+
+  const container = document.getElementById('qlist');
+  container.innerHTML = '';
+
+  if (ready.length > 1) {
+    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Ready — Waiting'; container.appendChild(hdr);
+    ready.slice(1).forEach((o, i) => container.appendChild(createQItem(o, i + 2)));
+  }
+  if (proc.length) {
+    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Being Processed'; container.appendChild(hdr);
+    proc.forEach((o) => container.appendChild(createQItem(o, null, 'qt-proc', 'Processing')));
+  }
+  if (np.length) {
+    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Not Pulled Yet'; container.appendChild(hdr);
+    np.forEach((o) => container.appendChild(createQItem(o, null, 'qt-np', 'Not Pulled')));
+  }
+  if (done.length) {
+    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Picked Up — Done'; container.appendChild(hdr);
+    done.forEach((o) => container.appendChild(createQItem(o, null, 'qt-dn', 'Done', true)));
+  }
+  if (!container.childElementCount) {
+    const empty = document.createElement('div'); empty.className = 'qempty'; empty.innerHTML = 'No orders in queue.<br>Add orders to your Google Sheet to begin.'; container.appendChild(empty);
+  }
 }
 
 function startCD(){cd=REFRESH;clearInterval(tmr);tmr=setInterval(()=>{cd--;document.getElementById('cdown').textContent=`· ${cd}s`;if(cd<=0){loadData();cd=REFRESH;}},1000);}

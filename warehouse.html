@@ -166,6 +166,23 @@
     .empty .ei { font-size:48px; opacity:.3; margin-bottom:16px; }
     .empty h3 { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
   </style>
+  <style>
+    @media (max-width: 1000px) {
+      .tbl-wrap { padding: 0 8px; }
+      .nm { font-size: 20px; }
+      .bxn { font-size: 22px; }
+      th { font-size: 10px; padding:8px 10px; }
+      .cell { padding:8px 10px; }
+    }
+    @media (max-width: 600px) {
+      html { font-size: 14px; }
+      thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tr { margin-bottom: 12px; }
+      td { padding: 8px 12px; }
+      .cell { display:block; }
+    }
+  </style>
 </head>
 <body>
 
@@ -225,130 +242,285 @@
 </div>
 
 <script>
-const KEY='om_produce_sheet_url';
-const DEFAULT='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
-const REFRESH=30;
-let tmr=null,cd=REFRESH;
+  const KEY = 'om_produce_sheet_url';
+  const DEFAULT =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
+  const REFRESH = 30;
+  let tmr = null;
+  let cd = REFRESH;
 
-function pad(n){return String(n).padStart(2,'0');}
-function tick(){const n=new Date();document.getElementById('clk').textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}`;document.getElementById('dln').textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}
-setInterval(tick,1000);tick();
-
-function fixURL(raw){
-  const u=(raw||'').trim();
-  if(!u)return'';
-  if(u.includes('output=csv'))return u;
-  const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if(m){const g=(u.match(/[#&?]gid=(\d+)/)||[])[1]||'0';return`https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;}
-  return u;
-}
-function isHTML(t){const s=t.trim();return s.startsWith('<!')||s.startsWith('<html');}
-
-function parseCSV(txt){
-  const lines=txt.split('\n');
-  function sr(l){const v=[];let c='',q=0;for(const ch of l){if(ch==='"'){q=1-q;}else if(ch===','&&!q){v.push(c.replace(/^"|"$/g,'').trim());c='';}else c+=ch;}v.push(c.replace(/^"|"$/g,'').trim());return v;}
-  let hi=0;for(let i=0;i<Math.min(5,lines.length);i++){if(sr(lines[i]).some(v=>v&&!/^\d+$/.test(v))){hi=i;break;}}
-  const hdrs=sr(lines[hi]).map(h=>h.replace(/"/g,'').trim());
-  const rows=[];
-  for(let i=hi+1;i<lines.length;i++){if(!lines[i].trim())continue;const vs=sr(lines[i]);if(vs.every(v=>!v))continue;const row={};hdrs.forEach((h,j)=>row[h]=(vs[j]||'').trim());rows.push(row);}
-  return{hdrs,rows};
-}
-function fc(hdrs,...ks){for(const k of ks){const f=hdrs.find(h=>h.toLowerCase().includes(k.toLowerCase()));if(f)return f;}return null;}
-function ns(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('collect')||s.includes('complete'))return'dn';return'np';}
-function sbadge(s){const m={np:['sb-np','Not Pulled'],proc:['sb-proc','Processing'],rd:['sb-rd','Ready'],dn:['sb-dn','Done']};const[c,l]=m[s]||m.np;return`<span class="sb ${c}">${l}</span>`;}
-
-function render(hdrs,rows){
-  const cNm=fc(hdrs,'customer name','name','customer','cust');
-  const cIn=fc(hdrs,'invoice','inv');
-  const cBx=fc(hdrs,'box','qty','quantity','pcs');
-  const cSt=fc(hdrs,'status','order status');
-  const cPd=fc(hdrs,'paid','payment','pay');
-  const cNt=fc(hdrs,'note','comment','remark');
-  const cNo=fc(hdrs,'#','s.no','sno','seq','no.');
-  const orders=rows.filter(r=>cNm?r[cNm]:Object.values(r).some(v=>v)).filter(r=>!cNm||r[cNm]);
-  const cts={np:0,proc:0,rd:0,dn:0};let totalBx=0;
-  orders.forEach(r=>{cts[ns(cSt?r[cSt]:'')]++;const b=parseInt(cBx?r[cBx]||0:0);if(!isNaN(b))totalBx+=b;});
-  document.getElementById('ct').textContent=orders.length;
-  document.getElementById('cnp').textContent=cts.np;
-  document.getElementById('cpr').textContent=cts.proc;
-  document.getElementById('crd').textContent=cts.rd;
-  document.getElementById('cdn').textContent=cts.dn;
-  document.getElementById('bxtotal').textContent=totalBx>0?`📦 ${totalBx} Total Boxes`:'';
-  const ord={np:0,proc:1,rd:2,dn:3};
-  const sorted=[...orders].sort((a,b)=>ord[ns(cSt?a[cSt]:'')]-ord[ns(cSt?b[cSt]:'')]);
-  const special=[cNo,cNm,cIn,cBx,cSt,cPd,cNt].filter(Boolean);
-  const extras=hdrs.filter(h=>h&&!special.includes(h));
-  const cols=[];
-  if(cNo)cols.push({k:cNo,l:'#',w:'52px',t:'no'});
-  if(cNm)cols.push({k:cNm,l:'Customer',w:'',t:'nm'});
-  if(cIn)cols.push({k:cIn,l:'Invoice',w:'140px',t:'mn'});
-  if(cBx)cols.push({k:cBx,l:'Boxes',w:'90px',t:'bx',c:1});
-  extras.forEach(k=>cols.push({k,l:k,w:'',t:'val'}));
-  if(cPd)cols.push({k:cPd,l:'Paid',w:'110px',t:'val'});
-  if(cNt)cols.push({k:cNt,l:'Notes',w:'180px',t:'val'});
-  if(cSt)cols.push({k:cSt,l:'Status',w:'150px',t:'st'});
-  document.getElementById('thd').innerHTML=cols.map(c=>`<th ${c.c?'class="tc"':''} ${c.w?`style="width:${c.w}"`:''}>${c.l}</th>`).join('');
-  const tbd=document.getElementById('tbd');
-  if(!sorted.length){tbd.innerHTML=`<tr><td colspan="${cols.length||5}"><div class="empty"><div class="ei">📋</div><h3>No Orders Yet</h3></div></td></tr>`;return;}
-  tbd.innerHTML=sorted.map((row,i)=>{
-    const s=ns(cSt?row[cSt]:'');
-    const cls={np:'snp',proc:'sproc',rd:'srd',dn:'sdn'}[s]||'snp';
-    return`<tr class="${cls}">${cols.map(col=>{
-      const v=row[col.k]||'';
-      const a=col.c?'justify-content:center':'';
-      let inner='';
-      if(col.t==='no') inner=`<span class="rn">${v||(i+1)}</span>`;
-      else if(col.t==='nm') inner=`<div><div class="nm">${v||'—'}</div>${cIn&&row[cIn]?`<div class="nsub">${row[cIn]}</div>`:''}</div>`;
-      else if(col.t==='mn') inner=`<span class="cvm">${v||'—'}</span>`;
-      else if(col.t==='bx') inner=`<div class="bxn">${v||'—'}</div>`;
-      else if(col.t==='st') inner=sbadge(s);
-      else inner=`<span class="cv">${v||''}</span>`;
-      return`<td><div class="cell" style="${a}">${inner}</div></td>`;
-    }).join('')}</tr>`;
-  }).join('');
-}
-
-function startCD(){cd=REFRESH;clearInterval(tmr);tmr=setInterval(()=>{cd--;document.getElementById('cdown').textContent=`· ${cd}s`;if(cd<=0){loadData();cd=REFRESH;}},1000);}
-
-async function loadData(){
-  const raw=localStorage.getItem(KEY)||DEFAULT;
-  const url=fixURL(raw);
-  if(!url){document.getElementById('ov').style.display='flex';return;}
-  const lp=document.getElementById('lpill'),lt=document.getElementById('ltxt');
-  lp.className='live-pill loading';lt.textContent='UPDATING';
-  try{
-    const res=await fetch(url+'&_='+Date.now());
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const txt=await res.text();
-    if(isHTML(txt))throw new Error('WRONG_URL');
-    const{hdrs,rows}=parseCSV(txt);
-    render(hdrs,rows);
-    document.getElementById('last-upd').textContent=`Updated ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-    lp.className='live-pill';lt.textContent='LIVE';
-    startCD();
-  }catch(e){
-    lp.className='live-pill err';lt.textContent='ERR';
-    document.getElementById('last-upd').textContent=e.message==='WRONG_URL'?'Wrong URL — check Settings':'Load failed — retrying in 15s';
-    if(e.message!=='WRONG_URL')setTimeout(loadData,15000);
+  function pad(n) {
+    return String(n).padStart(2, '0');
   }
-}
 
-async function connectOv(){
-  const raw=document.getElementById('ov-url').value.trim();
-  const url=fixURL(raw)||DEFAULT;
-  const err=document.getElementById('ov-err');
-  err.textContent='Testing…';
-  try{
-    const r=await fetch(url);if(!r.ok)throw new Error('HTTP');
-    const t=await r.text();if(isHTML(t))throw new Error('HTML');
-    localStorage.setItem(KEY,url);
-    document.getElementById('ov').style.display='none';
-    loadData();
-  }catch(e){err.textContent=e.message==='HTML'?'Edit link detected — use File → Publish to web → CSV.':'Cannot connect. Check URL.';}
-}
+  function tick() {
+    const n = new Date();
+    document.getElementById('clk').textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    document.getElementById('dln').textContent = n.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
 
-if(!localStorage.getItem(KEY))localStorage.setItem(KEY,DEFAULT);
-loadData();
+  setInterval(tick, 1000);
+  tick();
+
+  function fixURL(raw) {
+    const u = (raw || '').trim();
+    if (!u) return '';
+    if (u.includes('output=csv')) return u;
+    const m = u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) {
+      const g = (u.match(/[#&?]gid=(\d+)/) || [])[1] || '0';
+      return `https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;
+    }
+    return u;
+  }
+
+  function isHTML(t) {
+    const s = t.trim();
+    return s.startsWith('<!') || s.startsWith('<html');
+  }
+
+  function parseCSV(txt) {
+    const lines = txt.split('\n');
+
+    function sr(l) {
+      const v = [];
+      let c = '';
+      let q = 0;
+      for (const ch of l) {
+        if (ch === '"') {
+          q = 1 - q;
+        } else if (ch === ',' && !q) {
+          v.push(c.replace(/^"|"$/g, '').trim());
+          c = '';
+        } else {
+          c += ch;
+        }
+      }
+      v.push(c.replace(/^"|"$/g, '').trim());
+      return v;
+    }
+
+    let hi = 0;
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      if (sr(lines[i]).some((v) => v && !/^\d+$/.test(v))) {
+        hi = i;
+        break;
+      }
+    }
+
+    const hdrs = sr(lines[hi]).map((h) => h.replace(/"/g, '').trim());
+    const rows = [];
+
+    for (let i = hi + 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vs = sr(lines[i]);
+      if (vs.every((v) => !v)) continue;
+      const row = {};
+      hdrs.forEach((h, j) => (row[h] = (vs[j] || '').trim()));
+      rows.push(row);
+    }
+
+    return { hdrs, rows };
+  }
+
+  function fc(hdrs, ...ks) {
+    for (const k of ks) {
+      const f = hdrs.find((h) => h.toLowerCase().includes(k.toLowerCase()));
+      if (f) return f;
+    }
+    return null;
+  }
+
+  function ns(v) {
+    if (!v) return 'np';
+    const s = v.toLowerCase();
+    if (s.includes('not') || s.includes('unpull')) return 'np';
+    if (s.includes('process') || s.includes('pull')) return 'proc';
+    if (s.includes('ready')) return 'rd';
+    if (s.includes('done') || s.includes('pick') || s.includes('collect') || s.includes('complete')) return 'dn';
+    return 'np';
+  }
+
+  function sbadge(s) {
+    const m = {
+      np: ['sb-np', 'Not Pulled'],
+      proc: ['sb-proc', 'Processing'],
+      rd: ['sb-rd', 'Ready'],
+      dn: ['sb-dn', 'Done'],
+    };
+    const [c, l] = m[s] || m.np;
+    const el = document.createElement('span');
+    el.className = 'sb ' + c;
+    el.textContent = l;
+    return el;
+  }
+
+  function render(hdrs, rows) {
+    const cNm = fc(hdrs, 'customer name', 'name', 'customer', 'cust');
+    const cIn = fc(hdrs, 'invoice', 'inv');
+    const cBx = fc(hdrs, 'box', 'qty', 'quantity', 'pcs');
+    const cSt = fc(hdrs, 'status', 'order status');
+    const cPd = fc(hdrs, 'paid', 'payment', 'pay');
+    const cNt = fc(hdrs, 'note', 'comment', 'remark');
+    const cNo = fc(hdrs, '#', 's.no', 'sno', 'seq', 'no.');
+
+    const orders = rows.filter((r) => (cNm ? r[cNm] : Object.values(r).some((v) => v))).filter((r) => !cNm || r[cNm]);
+    const cts = { np: 0, proc: 0, rd: 0, dn: 0 };
+    let totalBx = 0;
+
+    orders.forEach((r) => {
+      cts[ns(cSt ? r[cSt] : '')]++;
+      const b = parseInt(cBx ? r[cBx] || 0 : 0);
+      if (!isNaN(b)) totalBx += b;
+    });
+
+    document.getElementById('ct').textContent = orders.length;
+    document.getElementById('cnp').textContent = cts.np;
+    document.getElementById('cpr').textContent = cts.proc;
+    document.getElementById('crd').textContent = cts.rd;
+    document.getElementById('cdn').textContent = cts.dn;
+    document.getElementById('bxtotal').textContent = totalBx > 0 ? `📦 ${totalBx} Total Boxes` : '';
+
+    const ord = { np: 0, proc: 1, rd: 2, dn: 3 };
+    const sorted = [...orders].sort((a, b) => ord[ns(cSt ? a[cSt] : '')] - ord[ns(cSt ? b[cSt] : '')]);
+
+    const special = [cNo, cNm, cIn, cBx, cSt, cPd, cNt].filter(Boolean);
+    const extras = hdrs.filter((h) => h && !special.includes(h));
+    const cols = [];
+
+    if (cNo) cols.push({ k: cNo, l: '#', w: '52px', t: 'no' });
+    if (cNm) cols.push({ k: cNm, l: 'Customer', w: '', t: 'nm' });
+    if (cIn) cols.push({ k: cIn, l: 'Invoice', w: '140px', t: 'mn' });
+    if (cBx) cols.push({ k: cBx, l: 'Boxes', w: '90px', t: 'bx', c: 1 });
+    extras.forEach((k) => cols.push({ k, l: k, w: '', t: 'val' }));
+    if (cPd) cols.push({ k: cPd, l: 'Paid', w: '110px', t: 'val' });
+    if (cNt) cols.push({ k: cNt, l: 'Notes', w: '180px', t: 'val' });
+    if (cSt) cols.push({ k: cSt, l: 'Status', w: '150px', t: 'st' });
+
+    // build table header safely
+    const thd = document.getElementById('thd');
+    thd.innerHTML = '';
+    cols.forEach((c) => {
+      const th = document.createElement('th');
+      if (c.c) th.className = 'tc';
+      if (c.w) th.style.width = c.w;
+      th.textContent = c.l;
+      thd.appendChild(th);
+    });
+
+    const tbd = document.getElementById('tbd');
+    tbd.innerHTML = '';
+    if (!sorted.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = cols.length || 5;
+      const empty = document.createElement('div'); empty.className = 'empty';
+      const ei = document.createElement('div'); ei.className = 'ei'; ei.textContent = '📋';
+      const h3 = document.createElement('h3'); h3.textContent = 'No Orders Yet';
+      empty.appendChild(ei); empty.appendChild(h3);
+      td.appendChild(empty); tr.appendChild(td); tbd.appendChild(tr);
+      return;
+    }
+
+    sorted.forEach((row, i) => {
+      const s = ns(cSt ? row[cSt] : '');
+      const cls = { np: 'snp', proc: 'sproc', rd: 'srd', dn: 'sdn' }[s] || 'snp';
+      const tr = document.createElement('tr'); tr.className = cls;
+      cols.forEach((col) => {
+        const v = row[col.k] || '';
+        const a = col.c ? 'justify-content:center' : '';
+        const td = document.createElement('td');
+        const cell = document.createElement('div'); cell.className = 'cell'; if (a) cell.style.justifyContent = 'center';
+        if (col.t === 'no') {
+          const span = document.createElement('span'); span.className = 'rn'; span.textContent = v || i + 1; cell.appendChild(span);
+        } else if (col.t === 'nm') {
+          const wrap = document.createElement('div');
+          const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = v || '—';
+          wrap.appendChild(nm);
+          if (cIn && row[cIn]) { const sub = document.createElement('div'); sub.className = 'nsub'; sub.textContent = row[cIn]; wrap.appendChild(sub); }
+          cell.appendChild(wrap);
+        } else if (col.t === 'mn') {
+          const span = document.createElement('span'); span.className = 'cvm'; span.textContent = v || '—'; cell.appendChild(span);
+        } else if (col.t === 'bx') {
+          const div = document.createElement('div'); div.className = 'bxn'; div.textContent = v || '—'; cell.appendChild(div);
+        } else if (col.t === 'st') {
+          const badge = sbadge(s); cell.appendChild(badge);
+        } else {
+          const span = document.createElement('span'); span.className = 'cv'; span.textContent = v || '';
+          cell.appendChild(span);
+        }
+        td.appendChild(cell);
+        tr.appendChild(td);
+      });
+      tbd.appendChild(tr);
+    });
+  }
+
+  function startCD() {
+    cd = REFRESH;
+    clearInterval(tmr);
+    tmr = setInterval(() => {
+      cd--;
+      document.getElementById('cdown').textContent = `· ${cd}s`;
+      if (cd <= 0) {
+        loadData();
+        cd = REFRESH;
+      }
+    }, 1000);
+  }
+
+  async function loadData() {
+    const raw = localStorage.getItem(KEY) || DEFAULT;
+    const url = fixURL(raw);
+    if (!url) {
+      document.getElementById('ov').style.display = 'flex';
+      return;
+    }
+
+    const lp = document.getElementById('lpill');
+    const lt = document.getElementById('ltxt');
+    lp.className = 'live-pill loading';
+    lt.textContent = 'UPDATING';
+
+    try {
+      const res = await fetch(url + '&_=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const txt = await res.text();
+      if (isHTML(txt)) throw new Error('WRONG_URL');
+      const { hdrs, rows } = parseCSV(txt);
+      render(hdrs, rows);
+      document.getElementById('last-upd').textContent = `Updated ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+      lp.className = 'live-pill';
+      lt.textContent = 'LIVE';
+      startCD();
+    } catch (e) {
+      lp.className = 'live-pill err';
+      lt.textContent = 'ERR';
+      document.getElementById('last-upd').textContent = e.message === 'WRONG_URL' ? 'Wrong URL — check Settings' : 'Load failed — retrying in 15s';
+      if (e.message !== 'WRONG_URL') setTimeout(loadData, 15000);
+    }
+  }
+
+  async function connectOv() {
+    const raw = document.getElementById('ov-url').value.trim();
+    const url = fixURL(raw) || DEFAULT;
+    const err = document.getElementById('ov-err');
+    err.textContent = 'Testing…';
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP');
+      const t = await r.text();
+      if (isHTML(t)) throw new Error('HTML');
+      localStorage.setItem(KEY, url);
+      document.getElementById('ov').style.display = 'none';
+      loadData();
+    } catch (e) {
+      err.textContent = e.message === 'HTML' ? 'Edit link detected — use File → Publish to web → CSV.' : 'Cannot connect. Check URL.';
+    }
+  }
+
+  if (!localStorage.getItem(KEY)) localStorage.setItem(KEY, DEFAULT);
+  loadData();
 </script>
 </body>
 </html>
