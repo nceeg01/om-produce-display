@@ -371,11 +371,24 @@
         return;
       }
       localStorage.setItem(KEY, url);
-      setStatus(true, `Connected — ${orders.length} order(s) found`);
+
+      // Update status with timestamp after successful connection
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+      const statusTxt = document.getElementById('status-txt');
+      statusTxt.textContent = 'Connected — Last update ' + time;
+      const statusBar = document.getElementById('status-bar');
+      statusBar.className = 'status-bar sb-ok';
+      document.getElementById('sdot').className = 'sdot sdot-g';
+
       setMsg(`✓ Saved. Found ${orders.length} rows. TV screens updated.`, 'ok');
       showPreview(hdrs, rows);
     } catch (e) {
-      setMsg(e.message, 'err');
+      // Show descriptive error message
+      const errorMsg = e.message || 'Could not reach or parse the Google Sheet. Check the URL is valid and the sheet is published to web.';
+      const el = document.getElementById('msg');
+      el.textContent = 'Connection failed: ' + errorMsg;
+      el.className = 'msg err';
       setStatus(false, 'Connection failed');
     }
   }

@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: OM
+      - generic [ref=e5]:
+        - emphasis [ref=e6]: OM
+        - text: Produce
+    - generic [ref=e7]: 🛒 Customer Pickup
+    - generic [ref=e8]:
+      - generic [ref=e11]: Updating…
+      - generic [ref=e12]: 01:32
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]: Now Serving
+      - generic [ref=e17]:
+        - generic [ref=e18]: ⏳
+        - heading "Loading…" [level=2] [ref=e19]
+    - generic [ref=e21]:
+      - generic [ref=e22]: Next Up
+      - generic [ref=e23]: "0"
+  - generic [ref=e25]:
+    - generic [ref=e26]: OM Produce Display System
+    - generic [ref=e27]:
+      - generic [ref=e28]: —
+      - link "⚙ Settings" [ref=e29] [cursor=pointer]:
+        - /url: index.html

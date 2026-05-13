@@ -1,0 +1,114 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]: OM
+    - generic [ref=e4]:
+      - emphasis [ref=e5]: OM
+      - text: Produce
+    - generic [ref=e6]: Display System
+  - generic [ref=e7]:
+    - generic [ref=e8]: TV Screens
+    - generic [ref=e9]:
+      - link "📦 Warehouse Screen Full order list with status, box counts, and totals. For warehouse staff. OPEN IN NEW TAB →" [ref=e10] [cursor=pointer]:
+        - /url: warehouse.html
+        - generic [ref=e11]: 📦
+        - generic [ref=e12]: Warehouse Screen
+        - generic [ref=e13]: Full order list with status, box counts, and totals. For warehouse staff.
+        - generic [ref=e14]: OPEN IN NEW TAB →
+      - link "🛒 Customer Pickup Now serving + queue. Clean view for customers waiting to collect orders. OPEN IN NEW TAB →" [ref=e15] [cursor=pointer]:
+        - /url: pickup.html
+        - generic [ref=e16]: 🛒
+        - generic [ref=e17]: Customer Pickup
+        - generic [ref=e18]: Now serving + queue. Clean view for customers waiting to collect orders.
+        - generic [ref=e19]: OPEN IN NEW TAB →
+    - generic [ref=e20]: Google Sheet Connection
+    - generic [ref=e21]:
+      - generic [ref=e24]: Connected — using configured sheet
+      - generic [ref=e25]:
+        - strong [ref=e26]: ⚠ Use the Publish link, not the edit link.
+        - text: "In Google Sheets:"
+        - strong [ref=e27]: File → Share → Publish to web → Comma-separated values (.csv) → Publish
+        - text: ", then paste that URL below. Pasting an edit link will be auto-converted."
+      - generic [ref=e28]: Google Sheet CSV URL
+      - textbox "https://docs.google.com/spreadsheets/d/…/pub?output=csv" [ref=e29]: https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv
+      - generic [ref=e31]:
+        - button "Save & Test Connection" [ref=e32] [cursor=pointer]
+        - button "Preview Data" [ref=e33] [cursor=pointer]
+        - button "Clear" [ref=e34] [cursor=pointer]
+    - generic [ref=e35]: Sheet Setup Guide
+    - generic [ref=e36]:
+      - generic [ref=e37]: Recommended Column Layout
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: A
+          - generic [ref=e41]: "#"
+          - generic [ref=e42]: 1, 2, 3…
+        - generic [ref=e43]:
+          - generic [ref=e44]: B
+          - generic [ref=e45]: Customer Name
+          - generic [ref=e46]: Arora Market
+        - generic [ref=e47]:
+          - generic [ref=e48]: C
+          - generic [ref=e49]: "Invoice #"
+          - generic [ref=e50]: INV-1042
+        - generic [ref=e51]:
+          - generic [ref=e52]: D
+          - generic [ref=e53]: Boxes
+          - generic [ref=e54]: "12"
+        - generic [ref=e55]:
+          - generic [ref=e56]: E
+          - generic [ref=e57]: Status
+          - generic [ref=e58]: Key column
+        - generic [ref=e59]:
+          - generic [ref=e60]: F
+          - generic [ref=e61]: Paid
+          - generic [ref=e62]: Cash / Zelle
+        - generic [ref=e63]:
+          - generic [ref=e64]: G
+          - generic [ref=e65]: Notes
+          - generic [ref=e66]: Returns, etc.
+      - generic [ref=e67]:
+        - generic [ref=e68]: Status Column Values
+        - generic [ref=e69]:
+          - generic [ref=e70]: Not Pulled
+          - generic [ref=e71]: Processing
+          - generic [ref=e72]: Ready
+          - generic [ref=e73]: Done
+        - generic [ref=e74]: Type these in column E. Leave blank = Not Pulled automatically.
+      - generic [ref=e75]:
+        - generic [ref=e76]: Steps to Connect
+        - list [ref=e77]:
+          - listitem [ref=e78]:
+            - text: Open
+            - strong [ref=e79]: Google Sheets
+            - text: and use your existing sheet or create a new one.
+          - listitem [ref=e80]:
+            - text: Set
+            - strong [ref=e81]: "Row 1 headers:"
+            - code [ref=e82]: "#"
+            - code [ref=e83]: Customer Name
+            - code [ref=e84]: "Invoice #"
+            - code [ref=e85]: Boxes
+            - code [ref=e86]: Status
+            - code [ref=e87]: Paid
+            - code [ref=e88]: Notes
+          - listitem [ref=e89]: Enter your orders from Row 2 onward. Set Status to one of the values above.
+          - listitem [ref=e90]:
+            - text: Go to
+            - strong [ref=e91]: File → Share → Publish to web → Comma-separated values (.csv) → Publish
+            - text: .
+          - listitem [ref=e92]:
+            - text: Copy the URL. Paste it above and click
+            - strong [ref=e93]: Save & Test Connection
+            - text: .
+          - listitem [ref=e94]:
+            - text: Open the
+            - strong [ref=e95]: Warehouse
+            - text: and
+            - strong [ref=e96]: Customer Pickup
+            - text: links in the TV browsers. Done!
+      - generic [ref=e97]:
+        - strong [ref=e98]: ✓ Daily Use
+        - text: — Screens auto-refresh every
+        - strong [ref=e99]: 30 seconds
+        - text: . Update status in Google Sheets on your master computer — changes appear on TV within 30 seconds. At end of day, download the sheet as Excel for records, then clear rows for the next morning.
+        - strong [ref=e100]: No website changes ever needed.
