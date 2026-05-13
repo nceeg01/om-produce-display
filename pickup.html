@@ -5,677 +5,374 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Customer Pickup — OM Produce</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #06090a;
-      --surface: #0c1214;
-      --surface2: #111a1c;
-      --border: #1a2a2d;
-      --text: #cce6ec;
-      --muted: #4d6e75;
-      --accent: #00d4ff;
-      --accent-dim: #032733;
-      --green: #2ed573;
-      --green-dim: #0d2e1a;
-      --amber: #ffb300;
-      --red: #ff4050;
-      --gray: #4a5568;
+      --bg:         #0E0C09;
+      --surface:    #1A1610;
+      --surface2:   #221D13;
+      --border:     #35291A;
+      --text:       #F0E6D4;
+      --muted:      #8A7558;
+      --orange:     #E8711A;
+      --orange-dim: #2D1B08;
+      --olive:      #5B8A2A;
+      --olive-dim:  #172010;
+      --red:        #C83A28;
+      --red-dim:    #2A1009;
+      --amber:      #C98510;
+      --amber-dim:  #271B04;
+      --gray:       #5A5248;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Barlow', sans-serif;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html,body { height:100%; overflow:hidden; }
+    body { background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; display:flex; flex-direction:column; }
 
-    /* Header */
-    .header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 40px;
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
+    /* ── HEADER ── */
+    .hdr {
+      display:flex; align-items:center; height:60px; flex-shrink:0;
+      background:var(--surface); border-bottom:3px solid var(--orange); padding:0 32px;
     }
-    .brand {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 24px;
-      font-weight: 900;
-      color: var(--accent);
-      letter-spacing: 3px;
-      text-transform: uppercase;
+    .logo-w { display:flex; align-items:center; gap:12px; }
+    .logo-sq { width:34px; height:34px; background:var(--orange); border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:900; color:#fff; }
+    .logo-n { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+    .logo-n em { color:var(--orange); font-style:normal; }
+    .hdr-tag { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); border-left:1px solid var(--border); padding-left:20px; margin-left:20px; }
+    .hdr-r { margin-left:auto; display:flex; align-items:center; gap:16px; }
+    .hdr-clock { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:700; letter-spacing:2px; color:var(--text); }
+    .live-badge {
+      display:flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px;
+      font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px;
+      background:var(--olive-dim); border:1px solid rgba(91,138,42,.3); color:var(--olive);
     }
-    .screen-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-left: 24px;
-      padding-left: 24px;
-      border-left: 2px solid var(--border);
-    }
-    .header-right {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-    #clock {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 36px;
-      font-weight: 800;
-      color: var(--text);
-      letter-spacing: 2px;
-    }
-    .live-indicator {
-      display: flex; align-items: center; gap: 7px;
-      font-size: 12px; font-weight: 600; color: var(--muted);
-      letter-spacing: 1px; text-transform: uppercase;
-    }
-    .live-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: livepulse 2s infinite;
-    }
-    @keyframes livepulse {
-      0%,100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(46,213,115,0.4); }
-      50% { opacity: 0.9; transform: scale(1.2); box-shadow: 0 0 0 6px rgba(46,213,115,0); }
-    }
+    .ldot { width:7px; height:7px; border-radius:50%; background:var(--olive); animation:lp 2s infinite; }
+    @keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(91,138,42,.5);}60%{box-shadow:0 0 0 6px rgba(91,138,42,0);}}
 
-    /* Main layout: left = now serving, right = queue */
-    .main-layout {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      overflow: hidden;
-    }
+    /* ── MAIN SPLIT ── */
+    .main { flex:1; display:grid; grid-template-columns:1fr 1fr; overflow:hidden; }
 
-    /* === NOW SERVING === */
-    .now-serving {
-      background: var(--green-dim);
-      border-right: 2px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      position: relative;
-      overflow: hidden;
+    /* ── NOW SERVING ── */
+    .ns {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:40px 48px; position:relative; overflow:hidden;
+      background: radial-gradient(ellipse at center, rgba(91,138,42,0.07) 0%, transparent 70%), var(--bg);
+      border-right:2px solid var(--border);
     }
-    .now-serving::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at center, rgba(46,213,115,0.08) 0%, transparent 70%);
-      pointer-events: none;
+    .ns::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:3px;
+      background:linear-gradient(90deg, transparent, var(--olive), transparent);
     }
-    .ns-label {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      color: var(--green);
-      margin-bottom: 24px;
-      opacity: 0.8;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .ns-eyebrow {
+      font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; letter-spacing:5px;
+      text-transform:uppercase; color:var(--olive); opacity:.7; margin-bottom:24px;
+      display:flex; align-items:center; gap:16px; width:100%; justify-content:center;
     }
-    .ns-label::before, .ns-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: rgba(46,213,115,0.2);
-    }
+    .ns-eyebrow::before,.ns-eyebrow::after { content:''; flex:1; height:1px; background:rgba(91,138,42,.2); }
     #ns-name {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(48px, 7vw, 96px);
-      font-weight: 900;
-      color: #e8fef0;
-      text-align: center;
-      line-height: 1;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      word-break: break-word;
-      transition: opacity 0.3s;
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:clamp(44px,7vw,92px); font-weight:900;
+      color:#F8F0E4; text-align:center; line-height:1;
+      text-transform:uppercase; letter-spacing:1px; word-break:break-word;
     }
-    #ns-details {
-      margin-top: 20px;
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
+    #ns-name.pop { animation:pop .4s ease-out; }
+    @keyframes pop { from{opacity:0;transform:scale(.96)translateY(8px);}to{opacity:1;transform:none;} }
+    #ns-meta {
+      display:flex; gap:16px; margin-top:22px; flex-wrap:wrap; justify-content:center;
     }
     .ns-pill {
-      padding: 8px 20px;
-      border-radius: 6px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 1px;
+      padding:7px 20px; border-radius:5px;
+      font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:1px;
     }
-    .ns-pill.inv { background: rgba(46,213,115,0.12); color: var(--green); border: 1px solid rgba(46,213,115,0.2); }
-    .ns-pill.boxes { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
-    .ready-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 24px;
-      background: var(--green);
-      color: #030e07;
-      padding: 10px 28px;
-      border-radius: 6px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 22px;
-      font-weight: 900;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+    .np-inv  { background:rgba(91,138,42,.12); color:var(--olive); border:1px solid rgba(91,138,42,.25); }
+    .np-box  { background:rgba(232,113,26,.12); color:var(--orange); border:1px solid rgba(232,113,26,.25); }
+    .ns-ready-tag {
+      margin-top:26px; display:inline-flex; align-items:center; gap:8px;
+      background:var(--olive); color:#fff; padding:10px 28px; border-radius:5px;
+      font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
     }
-    .no-serving {
-      text-align: center;
-    }
-    .no-serving .icon { font-size: 56px; margin-bottom: 20px; opacity: 0.4; }
-    .no-serving h2 {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .no-serving p { color: var(--muted); margin-top: 10px; font-size: 16px; }
+    .ns-empty { text-align:center; }
+    .ns-empty .eicon { font-size:52px; opacity:.25; margin-bottom:20px; }
+    .ns-empty h2 { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--muted); }
+    .ns-empty p { color:var(--muted); margin-top:8px; font-size:15px; }
 
-    /* === QUEUE === */
-    .queue-panel {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+    /* ── QUEUE PANEL ── */
+    .qpanel { display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
+    .qhdr {
+      display:flex; align-items:center; gap:12px; padding:14px 28px; flex-shrink:0;
+      background:var(--surface); border-bottom:1px solid var(--border);
     }
-    .queue-header {
-      background: var(--surface2);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-shrink: 0;
-    }
-    .queue-header-label {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .queue-count {
-      background: rgba(0,212,255,0.1);
-      color: var(--accent);
-      border: 1px solid rgba(0,212,255,0.2);
-      border-radius: 20px;
-      padding: 3px 14px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 18px;
-      font-weight: 800;
-    }
-    .queue-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 0;
-    }
-    .queue-scroll::-webkit-scrollbar { width: 4px; }
-    .queue-scroll::-webkit-scrollbar-track { background: transparent; }
-    .queue-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .qlabel { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+    .qbadge { background:rgba(232,113,26,.15); color:var(--orange); border:1px solid rgba(232,113,26,.25); border-radius:20px; padding:3px 12px; font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:800; }
+    .q-summary { margin-left:auto; font-size:12px; color:var(--muted); }
 
-    .queue-item {
-      padding: 16px 32px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      transition: background 0.2s;
-    }
-    .queue-item:hover { background: var(--surface2); }
-    .queue-item:last-child { border-bottom: none; }
-    .q-num {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 28px;
-      font-weight: 900;
-      color: var(--muted);
-      min-width: 44px;
-    }
-    .q-info { flex: 1; }
-    .q-name {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 32px;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1;
-      letter-spacing: 0.5px;
-    }
-    .q-sub {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 3px;
-      display: flex; gap: 12px; align-items: center;
-    }
-    .q-boxes {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 20px;
-      font-weight: 900;
-      color: var(--accent);
-    }
-    .q-status-badge {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      padding: 3px 10px;
-      border-radius: 4px;
-      text-transform: uppercase;
-    }
-    .qbadge-processing { background: rgba(255,179,0,0.12); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
-    .qbadge-not-pulled { background: rgba(255,64,80,0.1); color: var(--red); border: 1px solid rgba(255,64,80,0.15); }
-    .qbadge-done { background: rgba(74,85,104,0.2); color: var(--gray); border: 1px solid rgba(74,85,104,0.15); }
+    .qscroll { flex:1; overflow-y:auto; }
+    .qscroll::-webkit-scrollbar { width:3px; }
+    .qscroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* Sections inside queue */
-    .section-divider {
-      padding: 8px 32px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+    .sec-hdr {
+      padding:7px 28px; font-family:'Barlow Condensed',sans-serif;
+      font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+      color:var(--muted); background:var(--surface2); border-bottom:1px solid var(--border);
     }
+    .qitem {
+      display:flex; align-items:center; gap:14px; padding:14px 28px;
+      border-bottom:1px solid var(--border); transition:background .15s;
+    }
+    .qitem:hover { background:var(--surface2); }
+    .qitem.dimmed { opacity:.5; }
+    .qpos { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900; color:var(--muted); min-width:36px; }
+    .qinfo { flex:1; }
+    .qname { font-family:'Barlow Condensed',sans-serif; font-size:30px; font-weight:800; color:var(--text); line-height:1; }
+    .qsub { display:flex; gap:10px; align-items:center; margin-top:4px; }
+    .qinv { font-size:12px; color:var(--muted); font-family:monospace; }
+    .qboxes { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; color:var(--orange); }
+    .qstag {
+      font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:.5px;
+      padding:2px 9px; border-radius:3px; text-transform:uppercase;
+    }
+    .qt-proc { background:rgba(201,133,16,.12); color:var(--amber); border:1px solid rgba(201,133,16,.2); }
+    .qt-np   { background:rgba(200,58,40,.1);  color:var(--red);   border:1px solid rgba(200,58,40,.15); }
+    .qt-dn   { background:rgba(90,82,72,.15);  color:var(--gray);  border:1px solid rgba(90,82,72,.15); }
+    .qempty { text-align:center; padding:48px 28px; color:var(--muted); font-size:14px; line-height:1.6; }
 
-    /* Done section (dimmed) */
-    .queue-item.is-done { opacity: 0.5; }
+    /* ── BOTTOM ── */
+    .btm { height:34px; flex-shrink:0; padding:0 32px; background:var(--surface); border-top:1px solid var(--border); display:flex; align-items:center; font-size:11px; color:var(--muted); }
+    .btm-r { margin-left:auto; display:flex; align-items:center; gap:10px; }
+    #last-upd { color:var(--muted); }
+    #cdown { color:var(--orange); font-weight:600; }
+    .sl { color:var(--muted); text-decoration:none; }
+    .sl:hover { color:var(--orange); }
 
-    /* Bottom bar */
-    .bottombar {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 8px 40px;
-      display: flex;
-      align-items: center;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    #last-update-note { margin-left: auto; }
-    #countdown-display { color: var(--accent); margin-left: 8px; }
-
-    /* Setup overlay */
-    .setup-overlay {
-      position: fixed; inset: 0;
-      background: rgba(6, 9, 10, 0.97);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 100;
-    }
-    .setup-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 48px;
-      max-width: 560px;
-      text-align: center;
-    }
-    .setup-box h1 {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 36px;
-      font-weight: 900;
-      color: var(--accent);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .setup-box p { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
-    .setup-url-input {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 14px 16px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: monospace;
-      outline: none;
-      margin-bottom: 14px;
-    }
-    .setup-url-input:focus { border-color: var(--accent); }
-    .btn-connect {
-      background: var(--accent);
-      color: #06090a;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 14px 32px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-    }
-    .btn-connect:hover { filter: brightness(1.1); }
-    .setup-err { margin-top: 10px; font-size: 13px; color: var(--red); min-height: 18px; }
-
-    /* Empty queue */
-    .queue-empty {
-      text-align: center;
-      padding: 60px 32px;
-      color: var(--muted);
-    }
-    .queue-empty .icon { font-size: 36px; opacity: 0.4; margin-bottom: 12px; }
-    .queue-empty p { font-size: 15px; line-height: 1.6; }
-
-    /* Flicker animation for "now serving" change */
-    @keyframes nameIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .name-enter { animation: nameIn 0.4s ease-out; }
+    /* overlay */
+    .ov { position:fixed; inset:0; background:rgba(14,12,9,.96); display:flex; align-items:center; justify-content:center; z-index:100; }
+    .ovb { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:48px; max-width:500px; text-align:center; }
+    .ov-icon { width:52px; height:52px; background:var(--orange); border-radius:9px; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; color:#fff; margin:0 auto 18px; }
+    .ovb h1 { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; color:var(--text); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+    .ovb p { color:var(--muted); font-size:13px; line-height:1.7; margin-bottom:22px; }
+    .ov-in { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px 14px; color:var(--text); font-family:monospace; font-size:12px; outline:none; margin-bottom:12px; }
+    .ov-in:focus { border-color:var(--orange); }
+    .ov-btn { width:100%; background:var(--orange); color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800; letter-spacing:2px; text-transform:uppercase; padding:13px; border:none; border-radius:6px; cursor:pointer; }
+    .ov-btn:hover { filter:brightness(1.1); }
+    .ov-err { margin-top:10px; font-size:12px; color:var(--red); min-height:16px; }
   </style>
 </head>
 <body>
 
-  <!-- Setup Overlay -->
-  <div class="setup-overlay" id="setup-overlay" style="display:none">
-    <div class="setup-box">
-      <div style="font-size: 40px; margin-bottom: 16px;">🛒</div>
-      <h1>Customer Pickup</h1>
-      <p>Enter your Google Sheet CSV URL to show the live pickup queue on this screen.</p>
-      <input class="setup-url-input" id="setup-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv" />
-      <button class="btn-connect" onclick="connectFromSetup()">Connect Display</button>
-      <div class="setup-err" id="setup-err"></div>
-    </div>
+<div class="ov" id="ov" style="display:none">
+  <div class="ovb">
+    <div class="ov-icon">OM</div>
+    <h1>Customer Pickup</h1>
+    <p>Enter your Google Sheet CSV URL to show the live pickup queue.</p>
+    <input class="ov-in" id="ov-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv">
+    <button class="ov-btn" onclick="connectOv()">Connect Display</button>
+    <div class="ov-err" id="ov-err"></div>
   </div>
+</div>
 
-  <!-- Header -->
-  <div class="header">
-    <div class="brand">OM Produce</div>
-    <div class="screen-title">🛒 Customer Pickup</div>
-    <div class="header-right">
-      <div class="live-indicator">
-        <div class="live-dot"></div>
-        <span id="live-label">Live</span>
-      </div>
-      <div id="clock">--:--</div>
-    </div>
+<div class="hdr">
+  <div class="logo-w">
+    <div class="logo-sq">OM</div>
+    <div class="logo-n"><em>OM</em> Produce</div>
   </div>
+  <div class="hdr-tag">🛒 Customer Pickup</div>
+  <div class="hdr-r">
+    <div class="live-badge"><div class="ldot"></div><span id="ltxt">Live</span></div>
+    <div class="hdr-clock" id="clk">--:--</div>
+  </div>
+</div>
 
-  <!-- Main Layout -->
-  <div class="main-layout">
-
-    <!-- NOW SERVING -->
-    <div class="now-serving">
-      <div class="ns-label">Now Serving</div>
-      <div id="serving-section">
-        <!-- Populated by JS -->
-        <div class="no-serving">
-          <div class="icon">⏳</div>
-          <h2>Loading…</h2>
-        </div>
-      </div>
-    </div>
-
-    <!-- QUEUE -->
-    <div class="queue-panel">
-      <div class="queue-header">
-        <div class="queue-header-label">Next Up</div>
-        <div class="queue-count" id="queue-count">0</div>
-        <div style="margin-left: auto; font-size: 13px; color: var(--muted);" id="total-summary"></div>
-      </div>
-      <div class="queue-scroll" id="queue-list">
-        <!-- Populated by JS -->
+<div class="main">
+  <!-- NOW SERVING -->
+  <div class="ns">
+    <div class="ns-eyebrow">Now Serving</div>
+    <div id="ns-content">
+      <div class="ns-empty">
+        <div class="eicon">⏳</div>
+        <h2>Loading…</h2>
       </div>
     </div>
   </div>
 
-  <!-- Bottom Bar -->
-  <div class="bottombar">
-    <span>OM Produce Display System</span>
-    <span id="last-update-note">—</span>
-    <span id="countdown-display"></span>
-    <a href="index.html" style="color:var(--muted); text-decoration:none; margin-left: 24px;">⚙ Settings</a>
+  <!-- QUEUE -->
+  <div class="qpanel">
+    <div class="qhdr">
+      <div class="qlabel">Next Up</div>
+      <div class="qbadge" id="qcnt">0</div>
+      <div class="q-summary" id="q-sum"></div>
+    </div>
+    <div class="qscroll" id="qlist"></div>
   </div>
+</div>
+
+<div class="btm">
+  <span>OM Produce Display System</span>
+  <div class="btm-r">
+    <span id="last-upd">—</span>
+    <span id="cdown"></span>
+    <a class="sl" href="index.html">⚙ Settings</a>
+  </div>
+</div>
 
 <script>
-  const STORAGE_KEY = 'om_produce_sheet_url';
-  const REFRESH_INTERVAL = 30;
-  let countdownVal = REFRESH_INTERVAL;
-  let refreshTimer = null;
-  let lastNsName = '';
+const KEY='om_produce_sheet_url';
+const DEFAULT='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
+const REFRESH=30;
+let tmr=null,cd=REFRESH,prevName='';
 
-  function updateClock() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2,'0');
-    const m = String(now.getMinutes()).padStart(2,'0');
-    document.getElementById('clock').textContent = `${h}:${m}`;
+function pad(n){return String(n).padStart(2,'0');}
+function tick(){const n=new Date();document.getElementById('clk').textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}`;}
+setInterval(tick,1000);tick();
+
+function fixURL(raw){
+  const u=(raw||'').trim();
+  if(!u)return'';
+  if(u.includes('output=csv')||u.includes('/pub?'))return u;
+  const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if(m){const g=(u.match(/[#&?]gid=(\d+)/)||[])[1]||'0';return`https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;}
+  return u;
+}
+function isHTML(t){const s=t.trim();return s.startsWith('<!')||s.startsWith('<html');}
+
+function parseCSV(txt){
+  const lines=txt.split('\n');
+  function sr(line){const v=[];let c='',q=0;for(const ch of line){if(ch==='"'){q=1-q;}else if(ch===','&&!q){v.push(c.replace(/^"|"$/g,'').trim());c='';}else c+=ch;}v.push(c.replace(/^"|"$/g,'').trim());return v;}
+  let hi=0;
+  for(let i=0;i<Math.min(5,lines.length);i++){if(sr(lines[i]).some(v=>v&&!/^\d+$/.test(v))){hi=i;break;}}
+  const hdrs=sr(lines[hi]).map(h=>h.replace(/"/g,'').trim());
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const vs=sr(lines[i]);if(vs.every(v=>!v))continue;
+    const row={};hdrs.forEach((h,j)=>row[h]=(vs[j]||'').trim());rows.push(row);
   }
-  setInterval(updateClock, 1000);
-  updateClock();
+  return{hdrs,rows};
+}
+function fc(hdrs,...ks){for(const k of ks){const f=hdrs.find(h=>h.toLowerCase().includes(k.toLowerCase()));if(f)return f;}return null;}
+function ns(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('collect')||s.includes('complete'))return'dn';return'np';}
 
-  function startCountdown() {
-    countdownVal = REFRESH_INTERVAL;
-    clearInterval(refreshTimer);
-    refreshTimer = setInterval(() => {
-      countdownVal--;
-      if (countdownVal <= 0) {
-        loadData();
-        countdownVal = REFRESH_INTERVAL;
-      }
-      document.getElementById('countdown-display').textContent = `· Refresh in ${countdownVal}s`;
-    }, 1000);
+function renderServing(order){
+  const el=document.getElementById('ns-content');
+  if(!order){
+    el.innerHTML=`<div class="ns-empty"><div class="eicon">⏰</div><h2>No Orders Ready</h2><p>Orders appear here when marked Ready</p></div>`;
+    prevName='';return;
   }
+  const changed=prevName!==order.name;
+  prevName=order.name;
+  el.innerHTML=`
+    <div id="ns-name" class="${changed?'pop':''}">${order.name.toUpperCase()}</div>
+    <div id="ns-meta">
+      ${order.inv?`<div class="ns-pill np-inv">${order.inv}</div>`:''}
+      ${order.boxes?`<div class="ns-pill np-box">📦 ${order.boxes} Boxes</div>`:''}
+    </div>
+    <div class="ns-ready-tag">✓ Ready for Pickup</div>`;
+}
 
-  function parseCSV(text) {
-    const lines = text.split('\n');
-    function splitRow(line) {
-      const vals = []; let cur = ''; let inQ = false;
-      for (let c of line) {
-        if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
-        else { cur += c; }
-      }
-      vals.push(cur.trim());
-      return vals.map(v => v.replace(/^"|"$/g, '').trim());
-    }
-    let headerIdx = 0;
-    for (let i = 0; i < Math.min(8, lines.length); i++) {
-      const l = lines[i].toLowerCase();
-      if (l.includes('customer') || l.includes('name') || l.includes('status')) { headerIdx = i; break; }
-    }
-    const headers = splitRow(lines[headerIdx]);
-    const rows = [];
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const vals = splitRow(lines[i]);
-      if (vals.every(v => !v)) continue;
-      const row = {};
-      headers.forEach((h, j) => row[h] = vals[j] || '');
-      rows.push(row);
-    }
-    return { headers, rows };
+function renderQueue(all,cNm,cIn,cBx,cSt){
+  const ready=all.filter(o=>o.status==='rd');
+  const proc =all.filter(o=>o.status==='proc');
+  const np   =all.filter(o=>o.status==='np');
+  const done =all.filter(o=>o.status==='dn');
+  document.getElementById('qcnt').textContent=ready.length+proc.length+np.length;
+  document.getElementById('q-sum').textContent=`${ready.length} of ${all.length} ready`;
+
+  let html='';
+  // Ready queue (2nd onwards)
+  if(ready.length>1){
+    html+=`<div class="sec-hdr">Ready — Waiting</div>`;
+    html+=ready.slice(1).map((o,i)=>qrow(o,i+2,'')).join('');
   }
-
-  function findCol(headers, ...keys) {
-    for (let k of keys) {
-      const found = headers.find(h => h.toLowerCase().includes(k.toLowerCase()));
-      if (found) return found;
-    }
-    return null;
+  if(proc.length){
+    html+=`<div class="sec-hdr">Being Processed</div>`;
+    html+=proc.map(o=>qrow(o,null,'qt-proc','Processing')).join('');
   }
-
-  function normalizeStatus(val) {
-    if (!val) return 'not-pulled';
-    const v = val.toLowerCase().trim();
-    if (v.includes('not') || v.includes('unpull') || v === '') return 'not-pulled';
-    if (v.includes('process') || v.includes('progress') || v.includes('working') || v.includes('pull')) return 'processing';
-    if (v.includes('ready') || v === 'ready for pickup') return 'ready';
-    if (v.includes('done') || v.includes('picked') || v.includes('collect') || v.includes('deliver') || v.includes('complete')) return 'done';
-    return 'not-pulled';
+  if(np.length){
+    html+=`<div class="sec-hdr">Not Pulled Yet</div>`;
+    html+=np.map(o=>qrow(o,null,'qt-np','Not Pulled')).join('');
   }
+  if(done.length){
+    html+=`<div class="sec-hdr">Picked Up — Done</div>`;
+    html+=done.map(o=>qrow(o,null,'qt-dn','Done',true)).join('');
+  }
+  if(!html)html=`<div class="qempty">No orders in queue.<br>Add orders to your Google Sheet to begin.</div>`;
+  document.getElementById('qlist').innerHTML=html;
+}
 
-  function renderServing(order) {
-    if (!order) {
-      document.getElementById('serving-section').innerHTML = `
-        <div class="no-serving">
-          <div class="icon">⏰</div>
-          <h2>No Orders Ready</h2>
-          <p>Orders will appear here when marked Ready.</p>
-        </div>`;
-      lastNsName = '';
-      return;
-    }
-    const changed = lastNsName !== order.name;
-    lastNsName = order.name;
-    const animClass = changed ? 'name-enter' : '';
-    document.getElementById('serving-section').innerHTML = `
-      <div id="ns-name" class="${animClass}">${order.name.toUpperCase()}</div>
-      <div id="ns-details">
-        ${order.inv ? `<div class="ns-pill inv"># ${order.inv}</div>` : ''}
-        ${order.boxes ? `<div class="ns-pill boxes">📦 ${order.boxes} Boxes</div>` : ''}
+function qrow(o,pos,tclass,tlabel,dimmed=false){
+  return`<div class="qitem ${dimmed?'dimmed':''}">
+    <div class="qpos">${pos||'—'}</div>
+    <div class="qinfo">
+      <div class="qname">${o.name}</div>
+      <div class="qsub">
+        ${o.inv?`<span class="qinv">${o.inv}</span>`:''}
+        ${o.boxes?`<span class="qboxes">📦 ${o.boxes}</span>`:''}
+        ${tclass?`<span class="qstag ${tclass}">${tlabel}</span>`:''}
       </div>
-      <div class="ready-badge">✓ Ready for Pickup</div>`;
+    </div>
+  </div>`;
+}
+
+function startCD(){
+  cd=REFRESH;clearInterval(tmr);
+  tmr=setInterval(()=>{cd--;document.getElementById('cdown').textContent=`· ${cd}s`;if(cd<=0){loadData();cd=REFRESH;}},1000);
+}
+
+async function loadData(){
+  const raw=localStorage.getItem(KEY)||DEFAULT;
+  const url=fixURL(raw);
+  if(!url){document.getElementById('ov').style.display='flex';return;}
+  document.getElementById('ltxt').textContent='Updating…';
+  try{
+    const res=await fetch(url+'&_='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const txt=await res.text();
+    if(isHTML(txt))throw new Error('WRONG_URL');
+    const{hdrs,rows}=parseCSV(txt);
+    const cNm=fc(hdrs,'customer name','name','customer','cust');
+    const cIn=fc(hdrs,'invoice','inv');
+    const cBx=fc(hdrs,'box','qty','quantity','pcs');
+    const cSt=fc(hdrs,'status','order status');
+
+    const orders=rows
+      .filter(r=>cNm?r[cNm]:Object.values(r).some(v=>v))
+      .map(r=>({name:(cNm?r[cNm]:''),'inv':cIn?r[cIn]:'',boxes:cBx?r[cBx]:'',status:ns(cSt?r[cSt]:'')}))
+      .filter(o=>o.name);
+
+    const sortOrder={rd:0,proc:1,np:2,dn:3};
+    orders.sort((a,b)=>sortOrder[a.status]-sortOrder[b.status]);
+
+    const readyOrders=orders.filter(o=>o.status==='rd');
+    renderServing(readyOrders[0]||null);
+    renderQueue(orders,cNm,cIn,cBx,cSt);
+
+    const n=new Date();
+    document.getElementById('last-upd').textContent=`Updated ${n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+    document.getElementById('ltxt').textContent='Live';
+    startCD();
+  }catch(e){
+    document.getElementById('ltxt').textContent='Error';
+    document.getElementById('last-upd').textContent=e.message==='WRONG_URL'?'Wrong URL — check Settings':'Load failed — retrying…';
+    if(e.message!=='WRONG_URL')setTimeout(loadData,15000);
   }
+}
 
-  function renderQueue(orders) {
-    const ready = orders.filter(o => o.status === 'ready');
-    const processing = orders.filter(o => o.status === 'processing');
-    const notPulled = orders.filter(o => o.status === 'not-pulled');
-    const done = orders.filter(o => o.status === 'done');
-
-    const queueItems = [...ready.slice(1), ...processing, ...notPulled];
-    document.getElementById('queue-count').textContent = queueItems.length;
-
-    const total = orders.length;
-    const readyCount = ready.length;
-    document.getElementById('total-summary').textContent = `${readyCount} of ${total} ready`;
-
-    let html = '';
-
-    if (ready.length > 1) {
-      html += `<div class="section-divider">Ready — Waiting</div>`;
-      html += ready.slice(1).map((o, i) => queueItemHTML(o, i + 2, 'ready')).join('');
-    }
-
-    if (processing.length > 0) {
-      html += `<div class="section-divider">Being Processed</div>`;
-      html += processing.map((o, i) => queueItemHTML(o, null, 'processing')).join('');
-    }
-
-    if (notPulled.length > 0) {
-      html += `<div class="section-divider">Not Pulled Yet</div>`;
-      html += notPulled.map((o) => queueItemHTML(o, null, 'not-pulled')).join('');
-    }
-
-    if (done.length > 0) {
-      html += `<div class="section-divider">Picked Up — Done</div>`;
-      html += done.map((o) => queueItemHTML(o, null, 'done', true)).join('');
-    }
-
-    if (!html) {
-      html = `<div class="queue-empty"><div class="icon">📋</div><p>No orders in queue.<br>Add orders to your Google Sheet to begin.</p></div>`;
-    }
-
-    document.getElementById('queue-list').innerHTML = html;
+async function connectOv(){
+  const raw=document.getElementById('ov-url').value.trim();
+  const url=fixURL(raw)||DEFAULT;
+  const err=document.getElementById('ov-err');
+  err.textContent='Testing…';
+  try{
+    const r=await fetch(url);if(!r.ok)throw new Error('HTTP');
+    const t=await r.text();if(isHTML(t))throw new Error('HTML');
+    localStorage.setItem(KEY,url);
+    document.getElementById('ov').style.display='none';
+    loadData();
+  }catch(e){
+    err.textContent=e.message==='HTML'?'Edit link detected — use File → Publish to web → CSV.':'Cannot connect. Check URL.';
   }
+}
 
-  function queueItemHTML(o, position, status, isDone = false) {
-    const badgeClass = status === 'processing' ? 'qbadge-processing' : status === 'not-pulled' ? 'qbadge-not-pulled' : status === 'done' ? 'qbadge-done' : '';
-    const badgeLabel = status === 'processing' ? 'Processing' : status === 'not-pulled' ? 'Not Pulled' : status === 'done' ? 'Done' : '';
-    const posLabel = position ? `<span class="q-num">${position}</span>` : `<span class="q-num" style="opacity:0.3">—</span>`;
-    return `<div class="queue-item ${isDone ? 'is-done' : ''}">
-      ${posLabel}
-      <div class="q-info">
-        <div class="q-name">${o.name}</div>
-        <div class="q-sub">
-          ${o.inv ? `<span>${o.inv}</span>` : ''}
-          ${o.boxes ? `<span class="q-boxes">📦 ${o.boxes}</span>` : ''}
-          ${badgeClass ? `<span class="q-status-badge ${badgeClass}">${badgeLabel}</span>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }
-
-  async function loadData() {
-    const url = localStorage.getItem(STORAGE_KEY);
-    if (!url) {
-      document.getElementById('setup-overlay').style.display = 'flex';
-      return;
-    }
-    const liveLabel = document.getElementById('live-label');
-    liveLabel.textContent = 'Updating…';
-
-    try {
-      const res = await fetch(url + '&cacheBust=' + Date.now());
-      const text = await res.text();
-      const { headers, rows } = parseCSV(text);
-
-      const colName = findCol(headers, 'customer name', 'name', 'customer');
-      const colInv = findCol(headers, 'invoice', 'inv');
-      const colBoxes = findCol(headers, 'boxes', 'box');
-      const colStatus = findCol(headers, 'status', 'order status');
-
-      const orders = rows
-        .filter(r => colName && r[colName]?.trim())
-        .map(r => ({
-          name: r[colName] || '',
-          inv: colInv ? r[colInv] : '',
-          boxes: colBoxes ? r[colBoxes] : '',
-          status: normalizeStatus(colStatus ? r[colStatus] : ''),
-          raw: r
-        }));
-
-      const sortOrder = { 'ready': 0, 'processing': 1, 'not-pulled': 2, 'done': 3 };
-      orders.sort((a, b) => sortOrder[a.status] - sortOrder[b.status]);
-
-      const readyOrders = orders.filter(o => o.status === 'ready');
-      renderServing(readyOrders[0] || null);
-      renderQueue(orders);
-
-      const now = new Date();
-      document.getElementById('last-update-note').textContent = `Updated ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
-      liveLabel.textContent = 'Live';
-      startCountdown();
-    } catch(e) {
-      console.error(e);
-      liveLabel.textContent = 'Error';
-      document.getElementById('last-update-note').textContent = 'Failed to load — retrying…';
-      setTimeout(() => loadData(), 15000);
-    }
-  }
-
-  async function connectFromSetup() {
-    const url = document.getElementById('setup-url').value.trim();
-    if (!url) return;
-    const err = document.getElementById('setup-err');
-    err.textContent = 'Connecting…';
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error();
-      localStorage.setItem(STORAGE_KEY, url);
-      document.getElementById('setup-overlay').style.display = 'none';
-      loadData();
-    } catch {
-      err.textContent = 'Connection failed. Check URL and ensure the sheet is published publicly.';
-    }
-  }
-
-  loadData();
+if(!localStorage.getItem(KEY))localStorage.setItem(KEY,DEFAULT);
+loadData();
 </script>
 </body>
 </html>
