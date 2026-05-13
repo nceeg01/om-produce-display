@@ -8,99 +8,87 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:         #0E0C09;
-      --surface:    #1A1610;
-      --surface2:   #221D13;
-      --border:     #35291A;
-      --text:       #F0E6D4;
-      --muted:      #8A7558;
-      --orange:     #E8711A;
-      --orange-dim: #2D1B08;
-      --orange-hi:  #FF8C32;
-      --olive:      #5B8A2A;
-      --olive-dim:  #172010;
-      --red:        #C83A28;
-      --amber:      #C98510;
-      --gray:       #5A5248;
+      --bg:       #FFFFFF;
+      --surface:  #FAFAF8;
+      --surface2: #F3F0EC;
+      --border:   #E8E2DA;
+      --border2:  #D5CEC4;
+      --text:     #1C1710;
+      --muted:    #9A8B78;
+      --muted2:   #C4B8A8;
+      --orange:   #E8711A;
+      --orange-l: #FFF3EA;
+      --orange-m: #FDE0C4;
+      --olive:    #4A7A20;
+      --olive-l:  #EEF7E5;
+      --olive-m:  #C8E6A8;
+      --red:      #C0321E;
+      --red-l:    #FFF0EE;
+      --amber:    #B07808;
+      --amber-l:  #FFF8E5;
+      --gray:     #7A6E64;
+      --gray-l:   #F3F0EC;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; min-height:100vh; }
+    body { background:var(--surface); color:var(--text); font-family:'Barlow',sans-serif; min-height:100vh; }
 
-    /* ── NAV ── */
     nav {
-      background:var(--surface); border-bottom:3px solid var(--orange);
-      padding:0 32px; height:60px; display:flex; align-items:center; gap:16px;
+      background:#fff; border-bottom:3px solid var(--orange);
+      padding:0 32px; height:60px; display:flex; align-items:center; gap:12px;
+      box-shadow:0 1px 0 var(--border);
     }
     .logo-sq { width:34px; height:34px; background:var(--orange); border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:900; color:#fff; }
-    .logo-nm { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+    .logo-nm { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--text); }
     .logo-nm em { color:var(--orange); font-style:normal; }
-    .nav-tag { font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--muted); padding:4px 12px; background:var(--orange-dim); border:1px solid rgba(232,113,26,.2); border-radius:4px; }
+    .nav-tag { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--orange); background:var(--orange-l); border:1px solid var(--orange-m); padding:4px 11px; border-radius:4px; }
 
-    .page { max-width:880px; margin:0 auto; padding:40px 24px; }
+    .page { max-width:880px; margin:0 auto; padding:36px 24px; }
 
-    /* ── SECTION TITLE ── */
-    .sec-title {
-      font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700;
-      letter-spacing:2px; text-transform:uppercase; color:var(--muted);
-      margin-bottom:14px; display:flex; align-items:center; gap:12px;
-    }
+    .sec-title { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:12px; }
     .sec-title::after { content:''; flex:1; height:1px; background:var(--border); }
 
-    /* ── TV CARDS ── */
-    .tv-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:40px; }
-    .tv-card {
-      display:block; text-decoration:none; color:var(--text);
-      background:var(--surface); border:1px solid var(--border); border-radius:8px;
-      padding:20px 24px; transition:all .2s;
-    }
-    .tv-card:hover { border-color:var(--orange); background:var(--surface2); }
-    .tv-card .icon { font-size:28px; margin-bottom:12px; }
-    .tv-card .label { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+    /* TV CARDS */
+    .tv-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:36px; }
+    .tv-card { display:block; text-decoration:none; color:var(--text); background:#fff; border:1px solid var(--border); border-radius:8px; padding:20px 24px; transition:all .2s; }
+    .tv-card:hover { border-color:var(--orange); box-shadow:0 2px 12px rgba(232,113,26,.12); }
+    .tv-card .icon { font-size:26px; margin-bottom:10px; }
+    .tv-card .label { font-family:'Barlow Condensed',sans-serif; font-size:19px; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
     .tv-card .desc { font-size:13px; color:var(--muted); line-height:1.6; }
-    .tv-card .arrow { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:1px; color:var(--orange); margin-top:14px; display:block; }
+    .tv-card .arrow { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--orange); margin-top:14px; display:block; }
 
-    /* ── CONFIG CARD ── */
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:32px; }
-    .status-bar {
-      display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:6px; margin-bottom:20px; font-size:13px; font-weight:500;
-    }
-    .sb-ok  { background:rgba(91,138,42,.1); border:1px solid rgba(91,138,42,.25); color:var(--olive); }
-    .sb-err { background:rgba(200,58,40,.1); border:1px solid rgba(200,58,40,.25); color:var(--red); }
+    /* CARD */
+    .card { background:#fff; border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:28px; }
+
+    .status-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:6px; margin-bottom:18px; font-size:13px; font-weight:500; }
+    .sb-ok  { background:var(--olive-l); border:1px solid var(--olive-m); color:var(--olive); }
+    .sb-err { background:var(--red-l);   border:1px solid #F5C0BA;        color:var(--red); }
     .sdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-    .sdot-g { background:var(--olive); box-shadow:0 0 6px var(--olive); }
+    .sdot-g { background:var(--olive); }
     .sdot-r { background:var(--red); }
 
-    .warn-box {
-      background:rgba(201,133,16,.08); border:1px solid rgba(201,133,16,.25); border-radius:6px;
-      padding:12px 16px; font-size:13px; color:var(--amber); line-height:1.6; margin-bottom:16px;
-    }
-    .warn-box strong { color:#e8c04a; }
+    .warn-box { background:var(--amber-l); border:1px solid #F5D98A; border-radius:6px; padding:12px 16px; font-size:13px; color:var(--amber); line-height:1.6; margin-bottom:16px; }
+    .warn-box strong { color:#8A5C04; }
 
-    label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
-    input[type=text] {
-      width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px;
-      padding:12px 14px; color:var(--text); font-family:monospace; font-size:13px; outline:none; transition:border-color .2s;
-    }
-    input[type=text]:focus { border-color:var(--orange); }
-    input[type=text]::placeholder { color:var(--muted); opacity:.5; }
+    label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:7px; }
+    input[type=text] { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:11px 14px; color:var(--text); font-family:monospace; font-size:13px; outline:none; transition:border-color .2s; }
+    input[type=text]:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,113,26,.1); }
+    input[type=text]::placeholder { color:var(--muted2); }
+
     .msg { padding:8px 0; font-size:13px; min-height:20px; }
     .msg.ok  { color:var(--olive); }
     .msg.err { color:var(--red); }
 
     .btn-row { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
-    button {
-      font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:1px;
-      text-transform:uppercase; padding:11px 22px; border-radius:6px; border:none; cursor:pointer; transition:all .2s;
-    }
+    button { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:10px 22px; border-radius:6px; border:none; cursor:pointer; transition:all .2s; }
     .btn-p { background:var(--orange); color:#fff; }
-    .btn-p:hover { background:var(--orange-hi); }
-    .btn-s { background:transparent; color:var(--muted); border:1px solid var(--border); }
-    .btn-s:hover { color:var(--text); border-color:var(--muted); }
-    .btn-d { background:transparent; color:var(--red); border:1px solid rgba(200,58,40,.2); }
-    .btn-d:hover { background:rgba(200,58,40,.08); }
+    .btn-p:hover { filter:brightness(1.05); }
+    .btn-s { background:#fff; color:var(--muted); border:1px solid var(--border); }
+    .btn-s:hover { border-color:var(--border2); color:var(--text); }
+    .btn-d { background:#fff; color:var(--red); border:1px solid #F5C0BA; }
+    .btn-d:hover { background:var(--red-l); }
 
-    /* ── PREVIEW TABLE ── */
-    #prev-wrap { display:none; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+    /* PREVIEW */
+    #prev-wrap { display:none; margin-top:22px; padding-top:20px; border-top:1px solid var(--border); }
     .prev-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; }
     .tbl-scroll { overflow-x:auto; border-radius:6px; border:1px solid var(--border); }
     table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -108,43 +96,39 @@
     th { text-align:left; padding:9px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; }
     td { padding:9px 14px; border-bottom:1px solid var(--border); color:var(--text); }
     tr:last-child td { border-bottom:none; }
-    tr:hover td { background:var(--surface2); }
+    tr:hover td { background:var(--surface); }
     #col-info { margin-top:8px; font-size:11px; color:var(--muted); }
 
-    /* ── STATUS BADGES (preview) ── */
+    /* STATUS BADGES */
     .sbp { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:4px; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
-    .sbp-np   { background:rgba(200,58,40,.1);  color:var(--red);   border:1px solid rgba(200,58,40,.2); }
-    .sbp-proc { background:rgba(201,133,16,.1); color:var(--amber); border:1px solid rgba(201,133,16,.2); }
-    .sbp-rd   { background:rgba(91,138,42,.1);  color:var(--olive); border:1px solid rgba(91,138,42,.2); }
-    .sbp-dn   { background:rgba(90,82,72,.15);  color:var(--gray);  border:1px solid rgba(90,82,72,.15); }
+    .sbp::before { content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+    .sbp-np   { background:var(--red-l);   color:var(--red);   border:1px solid #F5C0BA; }
+    .sbp-np::before   { background:var(--red); }
+    .sbp-proc { background:var(--amber-l); color:var(--amber); border:1px solid #F5D98A; }
+    .sbp-proc::before { background:var(--amber); }
+    .sbp-rd   { background:var(--olive-l); color:var(--olive); border:1px solid var(--olive-m); }
+    .sbp-rd::before   { background:var(--olive); }
+    .sbp-dn   { background:var(--gray-l);  color:var(--gray);  border:1px solid var(--border2); }
+    .sbp-dn::before   { background:var(--gray); }
 
-    /* ── COLUMN GUIDE ── */
-    .col-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-top:14px; }
-    .col-item { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:10px 14px; }
+    /* COLUMN GUIDE */
+    .col-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin-top:14px; }
+    .col-item { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 14px; }
     .col-letter { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; color:var(--orange); line-height:1; }
-    .col-name { font-size:12px; font-weight:500; color:var(--text); margin-top:4px; }
+    .col-name { font-size:12px; font-weight:600; color:var(--text); margin-top:4px; }
     .col-ex { font-size:11px; color:var(--muted); margin-top:2px; }
-    .col-item.key-col { border-color:rgba(91,138,42,.35); background:rgba(91,138,42,.06); }
-    .col-item.key-col .col-letter { color:var(--olive); }
+    .col-item.key { border-color:var(--olive-m); background:var(--olive-l); }
+    .col-item.key .col-letter { color:var(--olive); }
 
-    /* ── STEPS ── */
+    /* STEPS */
     .steps { list-style:none; counter-reset:steps; }
-    .steps li {
-      counter-increment:steps; padding:13px 0 13px 50px; position:relative;
-      border-bottom:1px solid var(--border); font-size:14px; line-height:1.6; color:var(--muted);
-    }
+    .steps li { counter-increment:steps; padding:12px 0 12px 48px; position:relative; border-bottom:1px solid var(--border); font-size:14px; line-height:1.6; color:var(--muted); }
     .steps li:last-child { border-bottom:none; }
-    .steps li::before {
-      content:counter(steps); position:absolute; left:0; top:13px;
-      width:28px; height:28px; background:var(--orange-dim); color:var(--orange);
-      border:1px solid rgba(232,113,26,.2); border-radius:50%; display:flex; align-items:center; justify-content:center;
-      font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;
-    }
+    .steps li::before { content:counter(steps); position:absolute; left:0; top:12px; width:28px; height:28px; background:var(--orange-l); color:var(--orange); border:1px solid var(--orange-m); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; }
     .steps li strong { color:var(--text); }
     code { background:var(--surface2); border:1px solid var(--border); padding:2px 7px; border-radius:3px; font-size:12px; color:var(--orange); font-family:monospace; }
-    .reset-note { background:rgba(91,138,42,.07); border:1px solid rgba(91,138,42,.2); border-radius:6px; padding:14px 16px; font-size:13px; color:var(--muted); line-height:1.6; margin-top:20px; }
-    .reset-note strong { color:var(--text); }
-    .reset-note .tag { color:var(--olive); font-weight:600; }
+    .reset-note { background:var(--olive-l); border:1px solid var(--olive-m); border-radius:6px; padding:14px 16px; font-size:13px; color:var(--olive); line-height:1.6; margin-top:20px; }
+    .reset-note strong { color:#2D5010; }
   </style>
 </head>
 <body>
@@ -156,46 +140,40 @@
 
   <div class="page">
 
-    <!-- TV SCREENS -->
     <div class="sec-title">TV Screens</div>
     <div class="tv-grid">
       <a class="tv-card" href="warehouse.html" target="_blank">
         <div class="icon">📦</div>
         <div class="label">Warehouse Screen</div>
-        <div class="desc">Full order list with status, box counts, and totals. Live refresh for warehouse staff.</div>
+        <div class="desc">Full order list with status, box counts, and totals. For warehouse staff.</div>
         <span class="arrow">OPEN IN NEW TAB →</span>
       </a>
       <a class="tv-card" href="pickup.html" target="_blank">
         <div class="icon">🛒</div>
         <div class="label">Customer Pickup</div>
-        <div class="desc">Now serving + queue. Clean display for customers waiting to collect their orders.</div>
+        <div class="desc">Now serving + queue. Clean view for customers waiting to collect orders.</div>
         <span class="arrow">OPEN IN NEW TAB →</span>
       </a>
     </div>
 
-    <!-- CONFIG -->
     <div class="sec-title">Google Sheet Connection</div>
     <div class="card">
       <div id="status-bar" class="status-bar sb-err">
         <div class="sdot sdot-r" id="sdot"></div>
         <span id="status-txt">Not connected — enter your Google Sheet URL below</span>
       </div>
-
       <div class="warn-box">
         <strong>⚠ Use the Publish link, not the edit link.</strong><br>
-        In Google Sheets: <strong>File → Share → Publish to web → Comma-separated values (.csv) → Publish</strong><br>
-        Copy that URL and paste it below. If you paste an edit link by accident, it will be converted automatically.
+        In Google Sheets: <strong>File → Share → Publish to web → Comma-separated values (.csv) → Publish</strong>, then paste that URL below. Pasting an edit link will be auto-converted.
       </div>
-
       <label>Google Sheet CSV URL</label>
       <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv">
       <div class="msg" id="msg"></div>
       <div class="btn-row">
         <button class="btn-p" onclick="saveTest()">Save & Test Connection</button>
-        <button class="btn-s" onclick="preview()">Preview Data</button>
+        <button class="btn-s" onclick="doPreview()">Preview Data</button>
         <button class="btn-d" onclick="clearCfg()">Clear</button>
       </div>
-
       <div id="prev-wrap">
         <div class="prev-label">Live Data Preview — First 10 Rows</div>
         <div class="tbl-scroll"><table><thead><tr id="prv-hdr"></tr></thead><tbody id="prv-bdy"></tbody></table></div>
@@ -203,21 +181,19 @@
       </div>
     </div>
 
-    <!-- SETUP GUIDE -->
     <div class="sec-title">Sheet Setup Guide</div>
     <div class="card">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">Recommended Column Layout</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">Recommended Column Layout</div>
       <div class="col-grid">
         <div class="col-item"><div class="col-letter">A</div><div class="col-name">#</div><div class="col-ex">1, 2, 3…</div></div>
         <div class="col-item"><div class="col-letter">B</div><div class="col-name">Customer Name</div><div class="col-ex">Arora Market</div></div>
         <div class="col-item"><div class="col-letter">C</div><div class="col-name">Invoice #</div><div class="col-ex">INV-1042</div></div>
         <div class="col-item"><div class="col-letter">D</div><div class="col-name">Boxes</div><div class="col-ex">12</div></div>
-        <div class="col-item key-col"><div class="col-letter">E</div><div class="col-name">Status</div><div class="col-ex">Key column ↓</div></div>
+        <div class="col-item key"><div class="col-letter">E</div><div class="col-name">Status</div><div class="col-ex">Key column</div></div>
         <div class="col-item"><div class="col-letter">F</div><div class="col-name">Paid</div><div class="col-ex">Cash / Zelle</div></div>
-        <div class="col-item"><div class="col-letter">G</div><div class="col-name">Notes</div><div class="col-ex">Any returns…</div></div>
+        <div class="col-item"><div class="col-letter">G</div><div class="col-name">Notes</div><div class="col-ex">Returns, etc.</div></div>
       </div>
-
-      <div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);">
+      <div style="margin-top:16px;padding:14px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Status Column Values</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <span class="sbp sbp-np">Not Pulled</span>
@@ -227,133 +203,90 @@
         </div>
         <div style="margin-top:10px;font-size:12px;color:var(--muted);">Type these in column E. Leave blank = Not Pulled automatically.</div>
       </div>
-
-      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px">Steps to Connect</div>
+      <div style="margin-top:22px;padding-top:20px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px">Steps to Connect</div>
         <ol class="steps">
-          <li>Open <strong>Google Sheets</strong> — use your existing sheet or create a new one.</li>
-          <li>Set <strong>Row 1 headers</strong> to: <code>#</code> <code>Customer Name</code> <code>Invoice #</code> <code>Boxes</code> <code>Status</code> <code>Paid</code> <code>Notes</code></li>
-          <li>Enter orders from Row 2 onward. Set Status to one of the values above.</li>
-          <li>Go to <strong>File → Share → Publish to web</strong>. Choose <strong>Comma-separated values (.csv)</strong>, click <strong>Publish</strong>.</li>
-          <li>Copy the URL (looks like: <code>…/pub?gid=0&output=csv</code>). Paste it above and click <strong>Save & Test</strong>.</li>
-          <li>Open the Warehouse and Pickup links above in the TV browsers. Done!</li>
+          <li>Open <strong>Google Sheets</strong> and use your existing sheet or create a new one.</li>
+          <li>Set <strong>Row 1 headers:</strong> <code>#</code> <code>Customer Name</code> <code>Invoice #</code> <code>Boxes</code> <code>Status</code> <code>Paid</code> <code>Notes</code></li>
+          <li>Enter your orders from Row 2 onward. Set Status to one of the values above.</li>
+          <li>Go to <strong>File → Share → Publish to web → Comma-separated values (.csv) → Publish</strong>.</li>
+          <li>Copy the URL. Paste it above and click <strong>Save & Test Connection</strong>.</li>
+          <li>Open the <strong>Warehouse</strong> and <strong>Customer Pickup</strong> links in the TV browsers. Done!</li>
         </ol>
       </div>
-
       <div class="reset-note">
-        <span class="tag">✓ Daily Use</span><br>
-        TV screens auto-refresh every <strong>30 seconds</strong>. Update status in Google Sheets on your master computer — changes appear on TV within 30 seconds. At end of day, <strong>download your sheet as Excel</strong> for records, then clear rows below the header for the next day. <strong>No website changes ever needed.</strong>
+        <strong>✓ Daily Use</strong> — Screens auto-refresh every <strong>30 seconds</strong>. Update status in Google Sheets on your master computer — changes appear on TV within 30 seconds. At end of day, download the sheet as Excel for records, then clear rows for the next morning. <strong>No website changes ever needed.</strong>
       </div>
     </div>
-
   </div>
 
 <script>
 const KEY='om_produce_sheet_url';
 const DEFAULT='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
 
-function fixURL(raw){
-  const u=(raw||'').trim();
-  if(!u)return DEFAULT;
-  if(u.includes('output=csv')||u.includes('/pub?'))return u;
-  const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if(m){const g=(u.match(/[#&?]gid=(\d+)/)||[])[1]||'0';return`https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;}
-  return u;
-}
+function fixURL(raw){const u=(raw||'').trim();if(!u)return DEFAULT;if(u.includes('output=csv'))return u;const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);if(m){const g=(u.match(/[#&?]gid=(\d+)/)||[])[1]||'0';return`https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;}return u;}
 function isHTML(t){const s=t.trim();return s.startsWith('<!')||s.startsWith('<html');}
+function parseCSV(txt){
+  const lines=txt.split('\n');
+  function sr(l){const v=[];let c='',q=0;for(const ch of l){if(ch==='"'){q=1-q;}else if(ch===','&&!q){v.push(c.replace(/^"|"$/g,'').trim());c='';}else c+=ch;}v.push(c.replace(/^"|"$/g,'').trim());return v;}
+  let hi=0;for(let i=0;i<Math.min(5,lines.length);i++){if(sr(lines[i]).some(v=>v&&!/^\d+$/.test(v))){hi=i;break;}}
+  const hdrs=sr(lines[hi]).map(h=>h.replace(/"/g,'').trim());
+  const rows=[];for(let i=hi+1;i<lines.length;i++){if(!lines[i].trim())continue;const vs=sr(lines[i]);if(vs.every(v=>!v))continue;const row={};hdrs.forEach((h,j)=>row[h]=(vs[j]||'').trim());rows.push(row);}
+  return{hdrs,rows};
+}
+function normSt(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('complete'))return'dn';return'np';}
+function sbadge(v){const s=normSt(v);const m={np:['sbp sbp-np','Not Pulled'],proc:['sbp sbp-proc','Processing'],rd:['sbp sbp-rd','Ready'],dn:['sbp sbp-dn','Done']};const[c,l]=m[s];return`<span class="${c}">${l}</span>`;}
 
 function init(){
   const saved=localStorage.getItem(KEY)||DEFAULT;
   document.getElementById('sheet-url').value=saved;
-  setStatus(true,'Connected — using pre-configured sheet');
+  if(saved)setStatus(true,'Connected — using configured sheet');
 }
-
 function setStatus(ok,txt){
   const bar=document.getElementById('status-bar');
-  const dot=document.getElementById('sdot');
   bar.className='status-bar '+(ok?'sb-ok':'sb-err');
-  dot.className='sdot '+(ok?'sdot-g':'sdot-r');
+  document.getElementById('sdot').className='sdot '+(ok?'sdot-g':'sdot-r');
   document.getElementById('status-txt').textContent=txt;
 }
 function setMsg(t,c){const el=document.getElementById('msg');el.textContent=t;el.className='msg '+(c||'');}
 
-function parseCSV(txt){
-  const lines=txt.split('\n');
-  function sr(line){const v=[];let c='',q=0;for(const ch of line){if(ch==='"'){q=1-q;}else if(ch===','&&!q){v.push(c.replace(/^"|"$/g,'').trim());c='';}else c+=ch;}v.push(c.replace(/^"|"$/g,'').trim());return v;}
-  let hi=0;for(let i=0;i<Math.min(5,lines.length);i++){if(sr(lines[i]).some(v=>v&&!/^\d+$/.test(v))){hi=i;break;}}
-  const hdrs=sr(lines[hi]).map(h=>h.replace(/"/g,'').trim());
-  const rows=[];
-  for(let i=hi+1;i<lines.length;i++){if(!lines[i].trim())continue;const vs=sr(lines[i]);if(vs.every(v=>!v))continue;const row={};hdrs.forEach((h,j)=>row[h]=(vs[j]||'').trim());rows.push(row);}
-  return{hdrs,rows};
-}
-
-function normSt(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('complete'))return'dn';return'np';}
-function sbadge(v){const s=normSt(v);const m={np:['sbp sbp-np','Not Pulled'],proc:['sbp sbp-proc','Processing'],rd:['sbp sbp-rd','Ready'],dn:['sbp sbp-dn','Done']};const[c,l]=m[s];return`<span class="${c}">${l}</span>`;}
-
-async function fetch_csv(url){
+async function fetchCSV(url){
   const r=await fetch(url);
   if(!r.ok)throw new Error('HTTP '+r.status+' — is the sheet published publicly?');
   const t=await r.text();
   if(isHTML(t))throw new Error('Got a webpage. Use File → Share → Publish to web → CSV in Google Sheets.');
   return t;
 }
-
 async function saveTest(){
   const raw=document.getElementById('sheet-url').value.trim()||DEFAULT;
   const url=fixURL(raw);
   if(url!==raw.trim())document.getElementById('sheet-url').value=url;
   setMsg('Testing…','');
   try{
-    const txt=await fetch_csv(url);
+    const txt=await fetchCSV(url);
     const{hdrs,rows}=parseCSV(txt);
     const orders=rows.filter(r=>Object.values(r).some(v=>v));
-    if(!orders.length){setMsg('Connected but no data found. Make sure you have rows below the header.','err');return;}
+    if(!orders.length){setMsg('Connected but no rows found. Add data below the header row.','err');return;}
     localStorage.setItem(KEY,url);
     setStatus(true,`Connected — ${orders.length} order(s) found`);
     setMsg(`✓ Saved. Found ${orders.length} rows. TV screens updated.`,'ok');
     showPreview(hdrs,rows);
-  }catch(e){
-    setMsg(e.message,'err');
-    setStatus(false,'Connection failed');
-  }
+  }catch(e){setMsg(e.message,'err');setStatus(false,'Connection failed');}
 }
-
-async function preview(){
+async function doPreview(){
   const url=fixURL(document.getElementById('sheet-url').value.trim()||localStorage.getItem(KEY)||DEFAULT);
   setMsg('Loading…','');
-  try{
-    const txt=await fetch_csv(url);
-    const{hdrs,rows}=parseCSV(txt);
-    setMsg(`Loaded ${rows.filter(r=>Object.values(r).some(v=>v)).length} rows.`,'ok');
-    showPreview(hdrs,rows);
-  }catch(e){setMsg(e.message,'err');}
+  try{const txt=await fetchCSV(url);const{hdrs,rows}=parseCSV(txt);setMsg(`Loaded ${rows.filter(r=>Object.values(r).some(v=>v)).length} rows.`,'ok');showPreview(hdrs,rows);}
+  catch(e){setMsg(e.message,'err');}
 }
-
 function showPreview(hdrs,rows){
   document.getElementById('prev-wrap').style.display='block';
-  const hdr=document.getElementById('prv-hdr');
-  hdr.innerHTML=hdrs.map(h=>`<th>${h}</th>`).join('');
-  const bdy=document.getElementById('prv-bdy');
+  document.getElementById('prv-hdr').innerHTML=hdrs.map(h=>`<th>${h}</th>`).join('');
   const cSt=hdrs.find(h=>h.toLowerCase().includes('status'));
-  bdy.innerHTML=rows.filter(r=>Object.values(r).some(v=>v)).slice(0,10).map(row=>{
-    const cells=hdrs.map(h=>{
-      const v=row[h]||'';
-      if(cSt&&h===cSt)return`<td>${sbadge(v)}</td>`;
-      return`<td>${v}</td>`;
-    }).join('');
-    return`<tr>${cells}</tr>`;
-  }).join('');
+  document.getElementById('prv-bdy').innerHTML=rows.filter(r=>Object.values(r).some(v=>v)).slice(0,10).map(row=>`<tr>${hdrs.map(h=>`<td>${cSt&&h===cSt?sbadge(row[h]||''):(row[h]||'')}</td>`).join('')}</tr>`).join('');
   document.getElementById('col-info').textContent=`Columns detected: ${hdrs.join(' · ')}`;
 }
-
-function clearCfg(){
-  localStorage.removeItem(KEY);
-  document.getElementById('sheet-url').value='';
-  document.getElementById('prev-wrap').style.display='none';
-  setStatus(false,'Not connected');
-  setMsg('Cleared.','');
-}
-
+function clearCfg(){localStorage.removeItem(KEY);document.getElementById('sheet-url').value='';document.getElementById('prev-wrap').style.display='none';setStatus(false,'Not connected');setMsg('Cleared.','');}
 init();
 </script>
 </body>
