@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OM Produce — Display System Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070b09;
+      --surface: #0d1410;
+      --surface2: #131a14;
+      --border: #1c2a1e;
+      --text: #d6ead8;
+      --muted: #5a7a5d;
+      --accent: #3dfb78;
+      --accent-dim: #102a1a;
+      --red: #ff4757;
+      --amber: #ffb300;
+      --green: #2ed573;
+      --gray: #57606f;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      padding: 32px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .logo span { color: var(--text); font-weight: 400; }
+    .badge {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* TV Screen Links */
+    .screen-links {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .screen-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      text-decoration: none;
+      color: var(--text);
+      display: block;
+      transition: all 0.2s;
+    }
+    .screen-card:hover {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+    .screen-card .icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .screen-card .label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .screen-card .desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .screen-card .arrow {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    /* Config Section */
+    .config-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 32px;
+    }
+    .config-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .config-status.connected {
+      background: rgba(46, 213, 115, 0.1);
+      border: 1px solid rgba(46, 213, 115, 0.3);
+      color: var(--green);
+    }
+    .config-status.disconnected {
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      color: var(--red);
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.red { background: var(--red); }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'Barlow', monospace;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); opacity: 0.5; }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    button {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #070b09;
+    }
+    .btn-primary:hover { background: #5fff8f; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+    }
+    .btn-danger:hover { background: rgba(255, 71, 87, 0.1); }
+
+    /* Preview Table */
+    #preview-section {
+      display: none;
+      margin-top: 24px;
+    }
+    .preview-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: var(--surface2); }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .status-not-pulled { background: rgba(255,71,87,0.15); color: var(--red); }
+    .status-processing { background: rgba(255,179,0,0.15); color: var(--amber); }
+    .status-ready { background: rgba(46,213,115,0.15); color: var(--green); }
+    .status-done { background: rgba(87,96,111,0.2); color: var(--gray); }
+
+    /* Instructions */
+    .instructions {
+      margin-bottom: 32px;
+    }
+    .step-list {
+      list-style: none;
+      counter-reset: steps;
+    }
+    .step-list li {
+      counter-increment: steps;
+      padding: 14px 0 14px 52px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+    .step-list li:last-child { border-bottom: none; }
+    .step-list li::before {
+      content: counter(steps);
+      position: absolute;
+      left: 0;
+      top: 14px;
+      width: 28px; height: 28px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .step-list li strong { color: var(--text); }
+    code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* Column guide */
+    .col-guide {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .col-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+    .col-letter {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .col-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      margin-top: 4px;
+    }
+    .col-example {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .msg { padding: 10px 0; font-size: 13px; min-height: 20px; }
+    .msg.ok { color: var(--green); }
+    .msg.err { color: var(--red); }
+
+    .refresh-note {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 20px;
+      line-height: 1.6;
+    }
+    .refresh-note strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">OM <span>Produce</span></div>
+    <div class="badge">Display System</div>
+  </div>
+
+  <!-- TV Screen Links -->
+  <h2>TV Screens</h2>
+  <div class="screen-links">
+    <a class="screen-card" href="warehouse.html" target="_blank">
+      <div class="icon">📦</div>
+      <div class="label">Warehouse Screen</div>
+      <div class="desc">Full order list — all statuses, box counts, complete view for warehouse staff.</div>
+      <div class="arrow">OPEN IN NEW TAB →</div>
+    </a>
+    <a class="screen-card" href="pickup.html" target="_blank">
+      <div class="icon">🛒</div>
+      <div class="label">Customer Pickup</div>
+      <div class="desc">Now serving + queue — clean view for customers waiting to collect orders.</div>
+      <div class="arrow">OPEN IN NEW TAB →</div>
+    </a>
+  </div>
+
+  <!-- Config Section -->
+  <h2>Google Sheet Connection</h2>
+  <div class="config-section">
+    <div id="config-status" class="config-status disconnected">
+      <div class="dot red"></div>
+      <span id="config-status-text">Not connected — enter your Google Sheet URL below</span>
+    </div>
+
+    <label>Google Sheet CSV URL</label>
+    <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/pub?output=csv" />
+    <div id="msg" class="msg"></div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="saveAndTest()">Save & Test Connection</button>
+      <button class="btn-secondary" onclick="testPreview()">Preview Data</button>
+      <button class="btn-danger" onclick="clearConfig()">Clear</button>
+    </div>
+
+    <div id="preview-section">
+      <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+        <div class="preview-label">Live Preview — First 10 Orders</div>
+        <div class="table-wrap">
+          <table id="preview-table">
+            <thead><tr id="preview-headers"></tr></thead>
+            <tbody id="preview-body"></tbody>
+          </table>
+        </div>
+        <div id="col-detected" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+      </div>
+    </div>
+
+    <div class="refresh-note">
+      <strong>Auto-refresh:</strong> Both TV screens refresh data every <strong>30 seconds</strong> automatically. Any changes you make in Google Sheets will appear on screen within 30 seconds. You do not need to reload the TV browser tabs.
+    </div>
+  </div>
+
+  <!-- Setup Instructions -->
+  <div class="instructions">
+    <h2>Google Sheet Setup</h2>
+    <div class="config-section" style="margin-bottom: 0;">
+
+      <h3>Required Column Layout</h3>
+      <div class="col-guide">
+        <div class="col-item"><div class="col-letter">A</div><div class="col-name">#</div><div class="col-example">1, 2, 3…</div></div>
+        <div class="col-item"><div class="col-letter">B</div><div class="col-name">Customer Name</div><div class="col-example">John Smith</div></div>
+        <div class="col-item"><div class="col-letter">C</div><div class="col-name">Invoice #</div><div class="col-example">INV-1042</div></div>
+        <div class="col-item"><div class="col-letter">D</div><div class="col-name">Boxes</div><div class="col-example">12</div></div>
+        <div class="col-item" style="border-color: var(--green); background: rgba(46,213,115,0.05);">
+          <div class="col-letter" style="color: var(--green)">E</div>
+          <div class="col-name">Status</div>
+          <div class="col-example" style="color: var(--green)">Key column</div>
+        </div>
+        <div class="col-item"><div class="col-letter">F</div><div class="col-name">Paid</div><div class="col-example">Cash / Check / Zelle</div></div>
+        <div class="col-item"><div class="col-letter">G</div><div class="col-name">Notes</div><div class="col-example">Any returns, etc.</div></div>
+      </div>
+
+      <div style="margin-top: 16px; padding: 14px; background: var(--surface2); border-radius: 6px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px;">Status Column Values</div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <span class="status-badge status-not-pulled">Not Pulled</span>
+          <span class="status-badge status-processing">Processing</span>
+          <span class="status-badge status-ready">Ready</span>
+          <span class="status-badge status-done">Done</span>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: var(--muted);">
+          Type these exact values in column E. Leave blank = "Not Pulled" automatically.
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+        <h3>Steps to Connect</h3>
+        <ol class="step-list">
+          <li>Open <strong>Google Sheets</strong> and create a new spreadsheet (or copy your existing one).</li>
+          <li>Set up row 1 as headers: <code>#</code> · <code>Customer Name</code> · <code>Invoice #</code> · <code>Boxes</code> · <code>Status</code> · <code>Paid</code> · <code>Notes</code></li>
+          <li>Enter your orders starting from row 2. Set <strong>Status</strong> to one of: <code>Not Pulled</code>, <code>Processing</code>, <code>Ready</code>, <code>Done</code>.</li>
+          <li>Go to <strong>File → Share → Publish to web</strong>. Under "Link", choose <strong>Comma-separated values (.csv)</strong>, then click <strong>Publish</strong>.</li>
+          <li>Copy the URL that appears. It will look like:<br>
+            <code style="word-break: break-all; display: inline-block; margin-top: 6px;">https://docs.google.com/spreadsheets/d/…/pub?gid=0&single=true&output=csv</code>
+          </li>
+          <li>Paste that URL into the field above and click <strong>Save & Test Connection</strong>.</li>
+          <li>Open <strong>Warehouse</strong> and <strong>Customer Pickup</strong> links above in the TV browsers. Done!</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 20px; padding: 14px; background: rgba(46,213,115,0.06); border-radius: 6px; border: 1px solid rgba(46,213,115,0.2);">
+        <div style="font-size: 13px; color: var(--green); font-weight: 600; margin-bottom: 6px;">✓ Daily Reset</div>
+        <div style="font-size: 13px; color: var(--muted); line-height: 1.6;">
+          At the end of each day, you can <strong style="color: var(--text);">download the sheet</strong> as Excel, then clear all rows below the header for the next day — or simply keep adding rows. 
+          The TV screens always show whatever is currently in the sheet. <strong style="color: var(--text);">No website changes needed.</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'om_produce_sheet_url';
+
+  function init() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      document.getElementById('sheet-url').value = saved;
+      updateStatus(true, 'Connected');
+    }
+  }
+
+  function updateStatus(connected, text) {
+    const el = document.getElementById('config-status');
+    const dot = el.querySelector('.dot');
+    el.className = 'config-status ' + (connected ? 'connected' : 'disconnected');
+    dot.className = 'dot ' + (connected ? 'green' : 'red');
+    document.getElementById('config-status-text').textContent = text;
+  }
+
+  function setMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+  }
+
+  async function saveAndTest() {
+    const url = document.getElementById('sheet-url').value.trim();
+    if (!url) { setMsg('Please enter a URL.', 'err'); return; }
+    setMsg('Testing connection…', '');
+    try {
+      const data = await fetchCSV(url);
+      if (data.length === 0) { setMsg('Sheet appears empty or headers not found.', 'err'); return; }
+      localStorage.setItem(STORAGE_KEY, url);
+      updateStatus(true, `Connected — ${data.length} order(s) found`);
+      setMsg(`✓ Saved. Found ${data.length} row(s). TV screens will use this sheet.`, 'ok');
+      showPreview(data);
+    } catch(e) {
+      setMsg('Connection failed. Check URL or make sure the sheet is published publicly.', 'err');
+      updateStatus(false, 'Connection failed');
+    }
+  }
+
+  async function testPreview() {
+    const url = document.getElementById('sheet-url').value.trim() || localStorage.getItem(STORAGE_KEY);
+    if (!url) { setMsg('No URL configured.', 'err'); return; }
+    setMsg('Loading preview…', '');
+    try {
+      const data = await fetchCSV(url);
+      setMsg(`Loaded ${data.length} row(s).`, 'ok');
+      showPreview(data);
+    } catch(e) {
+      setMsg('Failed to load. ' + e.message, 'err');
+    }
+  }
+
+  function clearConfig() {
+    localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('sheet-url').value = '';
+    document.getElementById('preview-section').style.display = 'none';
+    updateStatus(false, 'Not connected');
+    setMsg('Configuration cleared.', '');
+  }
+
+  async function fetchCSV(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    return parseCSV(text);
+  }
+
+  function parseCSV(text) {
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) return [];
+
+    function splitRow(line) {
+      const vals = []; let cur = ''; let inQ = false;
+      for (let c of line) {
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      vals.push(cur.trim());
+      return vals;
+    }
+
+    let headerIdx = 0;
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      const l = lines[i].toLowerCase();
+      if (l.includes('customer') || l.includes('name') || l.includes('status')) {
+        headerIdx = i; break;
+      }
+    }
+
+    const headers = splitRow(lines[headerIdx]).map(h => h.replace(/"/g, '').trim());
+    const rows = [];
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+      const vals = splitRow(lines[i]).map(v => v.replace(/"/g, '').trim());
+      if (vals.every(v => !v)) continue;
+      const row = {};
+      headers.forEach((h, j) => row[h] = vals[j] || '');
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function showPreview(data) {
+    if (!data.length) return;
+    document.getElementById('preview-section').style.display = 'block';
+    const headers = Object.keys(data[0]);
+    const thead = document.getElementById('preview-headers');
+    thead.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+
+    const tbody = document.getElementById('preview-body');
+    tbody.innerHTML = data.slice(0, 10).map(row => {
+      const cells = headers.map(h => {
+        const val = row[h] || '';
+        const k = h.toLowerCase();
+        if (k.includes('status')) {
+          return `<td>${statusBadge(val)}</td>`;
+        }
+        return `<td>${val}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    const colInfo = headers.join(' · ');
+    document.getElementById('col-detected').textContent = `Columns detected: ${colInfo}`;
+  }
+
+  function statusBadge(val) {
+    const v = val.toLowerCase();
+    if (!v || v.includes('not') || v.includes('unpull') || v === '') {
+      return `<span class="status-badge status-not-pulled">Not Pulled</span>`;
+    } else if (v.includes('process') || v.includes('progress') || v.includes('pull') || v.includes('working')) {
+      return `<span class="status-badge status-processing">Processing</span>`;
+    } else if (v.includes('ready') || v.includes('waiting')) {
+      return `<span class="status-badge status-ready">Ready</span>`;
+    } else {
+      return `<span class="status-badge status-done">Done</span>`;
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

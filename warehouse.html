@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warehouse — OM Produce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060908;
+      --surface: #0c1210;
+      --surface2: #101910;
+      --border: #1a2a1b;
+      --text: #cce5ce;
+      --muted: #4d6e50;
+      --accent: #39f870;
+      --red: #ff4050;
+      --amber: #ffb300;
+      --green: #28e06a;
+      --gray: #4a5568;
+      --row-hover: #0f1a10;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 0 32px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+    .brand {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .screen-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-left: 2px solid var(--border);
+      padding-left: 24px;
+    }
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    #clock {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 2px;
+    }
+    #date-display {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+    }
+    .refresh-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 0 rgba(40, 224, 106, 0.4);
+      animation: pulse 2s infinite;
+    }
+    .pulse-dot.loading {
+      background: var(--amber);
+      animation: none;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(40,224,106,0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(40,224,106,0); }
+      100% { box-shadow: 0 0 0 0 rgba(40,224,106,0); }
+    }
+
+    /* STATUS SUMMARY BAR */
+    .summary-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .summary-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-right: 8px;
+    }
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 5px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .stat-chip .count {
+      font-size: 24px;
+      font-weight: 900;
+    }
+    .stat-chip .label { font-size: 12px; font-weight: 600; letter-spacing: 1px; opacity: 0.9; }
+    .chip-not-pulled { background: rgba(255,64,80,0.12); color: var(--red); border: 1px solid rgba(255,64,80,0.2); }
+    .chip-processing { background: rgba(255,179,0,0.12); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
+    .chip-ready { background: rgba(40,224,106,0.12); color: var(--green); border: 1px solid rgba(40,224,106,0.2); }
+    .chip-done { background: rgba(74,85,104,0.2); color: var(--gray); border: 1px solid rgba(74,85,104,0.2); }
+    .chip-total { background: rgba(57,248,112,0.06); color: var(--accent); border: 1px solid rgba(57,248,112,0.15); }
+
+    /* TABLE AREA */
+    .table-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      position: relative;
+    }
+    .table-area::-webkit-scrollbar { width: 6px; }
+    .table-area::-webkit-scrollbar-track { background: var(--bg); }
+    .table-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--surface2);
+    }
+    th {
+      padding: 14px 20px;
+      text-align: left;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+    }
+    th.center { text-align: center; }
+    td {
+      padding: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .row-inner {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+    }
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover td { background: var(--row-hover); }
+
+    /* Row status left border */
+    tbody tr.status-not-pulled td:first-child .row-inner { border-left: 3px solid var(--red); }
+    tbody tr.status-processing td:first-child .row-inner { border-left: 3px solid var(--amber); }
+    tbody tr.status-ready td:first-child .row-inner { border-left: 3px solid var(--green); }
+    tbody tr.status-done td:first-child .row-inner { border-left: 3px solid var(--gray); opacity: 0.7; }
+
+    .num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .customer-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.5px;
+      line-height: 1;
+    }
+    .invoice-num {
+      font-size: 14px;
+      color: var(--muted);
+      font-family: monospace;
+    }
+    .boxes-count {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .boxes-label { font-size: 10px; color: var(--muted); text-align: center; margin-top: -2px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Status badge */
+    .sbadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .sbadge::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sbadge.s-not-pulled { background: rgba(255,64,80,0.12); color: var(--red); border: 1px solid rgba(255,64,80,0.2); }
+    .sbadge.s-not-pulled::before { background: var(--red); }
+    .sbadge.s-processing { background: rgba(255,179,0,0.12); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
+    .sbadge.s-processing::before { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+    .sbadge.s-ready { background: rgba(40,224,106,0.12); color: var(--green); border: 1px solid rgba(40,224,106,0.3); }
+    .sbadge.s-ready::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .sbadge.s-done { background: rgba(74,85,104,0.2); color: var(--gray); border: 1px solid rgba(74,85,104,0.2); }
+    .sbadge.s-done::before { background: var(--gray); }
+
+    .paid-tag {
+      font-size: 12px;
+      padding: 3px 9px;
+      border-radius: 3px;
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 500;
+      border: 1px solid var(--border);
+    }
+    .notes-text {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Setup overlay */
+    .setup-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6, 9, 8, 0.97);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .setup-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 48px;
+      max-width: 560px;
+      text-align: center;
+    }
+    .setup-box h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .setup-box p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+    .setup-url-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .setup-url-input:focus { border-color: var(--accent); }
+    .btn-connect {
+      background: var(--accent);
+      color: #060908;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-connect:hover { background: #5fff8f; }
+    .setup-msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+    .setup-msg.ok { color: var(--green); }
+    .setup-msg.err { color: var(--red); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    /* Bottom bar */
+    .bottombar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .bottombar-right { margin-left: auto; font-size: 12px; color: var(--muted); }
+    #last-updated { color: var(--muted); }
+    #countdown { color: var(--accent); margin-left: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- Setup Overlay (shown if no config) -->
+  <div class="setup-overlay" id="setup-overlay" style="display:none">
+    <div class="setup-box">
+      <div style="font-size: 40px; margin-bottom: 16px;">📦</div>
+      <h1>Warehouse Display</h1>
+      <p>Paste your Google Sheet CSV URL to begin. Set this once — it persists on this browser.</p>
+      <input class="setup-url-input" id="setup-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv" />
+      <button class="btn-connect" onclick="connectFromSetup()">Connect & Start Display</button>
+      <div class="setup-msg" id="setup-msg"></div>
+    </div>
+  </div>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="brand">OM Produce</div>
+    <div class="screen-label">📦 Warehouse View</div>
+    <div class="topbar-right">
+      <div class="refresh-indicator">
+        <div class="pulse-dot" id="pulse-dot"></div>
+        <span id="refresh-label">LIVE</span>
+      </div>
+      <div>
+        <div id="clock">--:--</div>
+        <div id="date-display">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Bar -->
+  <div class="summary-bar">
+    <div class="summary-label">Orders:</div>
+    <div class="stat-chip chip-total"><span class="count" id="cnt-total">0</span><span class="label">Total</span></div>
+    <div class="stat-chip chip-not-pulled"><span class="count" id="cnt-notpulled">0</span><span class="label">Not Pulled</span></div>
+    <div class="stat-chip chip-processing"><span class="count" id="cnt-processing">0</span><span class="label">Processing</span></div>
+    <div class="stat-chip chip-ready"><span class="count" id="cnt-ready">0</span><span class="label">Ready</span></div>
+    <div class="stat-chip chip-done"><span class="count" id="cnt-done">0</span><span class="label">Done</span></div>
+    <div style="margin-left: auto; font-size: 13px; color: var(--muted)" id="total-boxes-bar"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-area" id="table-area">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Customer Name</th>
+          <th style="width:140px">Invoice #</th>
+          <th class="center" style="width:100px">Boxes</th>
+          <th style="width:170px">Status</th>
+          <th style="width:120px">Paid</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="orders-body">
+        <tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div><h3>Loading orders…</h3></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottombar">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span style="color:var(--red)">Not Pulled</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div><span style="color:var(--amber)">Processing</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div><span style="color:var(--green)">Ready</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gray)"></div><span style="color:var(--gray)">Done</span></div>
+    <div class="bottombar-right">
+      <span id="last-updated">—</span>
+      <span id="countdown"></span>
+      <a href="index.html" style="color:var(--muted); text-decoration:none; margin-left: 24px; font-size: 12px;">⚙ Settings</a>
+    </div>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'om_produce_sheet_url';
+  const REFRESH_INTERVAL = 30;
+  let countdownVal = REFRESH_INTERVAL;
+  let refreshTimer = null;
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').textContent = `${h}:${m}`;
+    document.getElementById('date-display').textContent = now.toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric'
+    });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Countdown
+  function startCountdown() {
+    countdownVal = REFRESH_INTERVAL;
+    const el = document.getElementById('countdown');
+    el.textContent = `· Refresh in ${countdownVal}s`;
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      countdownVal--;
+      if (countdownVal <= 0) {
+        loadData();
+        countdownVal = REFRESH_INTERVAL;
+      }
+      el.textContent = `· Refresh in ${countdownVal}s`;
+    }, 1000);
+  }
+
+  // CSV parsing
+  function parseCSV(text) {
+    const lines = text.split('\n');
+    function splitRow(line) {
+      const vals = []; let cur = ''; let inQ = false;
+      for (let c of line) {
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      vals.push(cur.trim());
+      return vals.map(v => v.replace(/^"|"$/g, '').trim());
+    }
+
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(8, lines.length); i++) {
+      const l = lines[i].toLowerCase();
+      if (l.includes('customer') || l.includes('name') || l.includes('status')) {
+        headerIdx = i; break;
+      }
+    }
+    if (headerIdx === -1) headerIdx = 0;
+
+    const headers = splitRow(lines[headerIdx]);
+    const rows = [];
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = splitRow(lines[i]);
+      if (vals.every(v => !v)) continue;
+      const row = {};
+      headers.forEach((h, j) => row[h] = vals[j] || '');
+      rows.push(row);
+    }
+    return { headers, rows };
+  }
+
+  // Column finder
+  function findCol(headers, ...keys) {
+    for (let k of keys) {
+      const found = headers.find(h => h.toLowerCase().includes(k.toLowerCase()));
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // Status normalizer
+  function normalizeStatus(val) {
+    if (!val) return 'not-pulled';
+    const v = val.toLowerCase().trim();
+    if (v.includes('not') || v.includes('unpull') || v === '') return 'not-pulled';
+    if (v.includes('process') || v.includes('progress') || v.includes('working') || v.includes('pulling')) return 'processing';
+    if (v.includes('ready') || v.includes('waiting for pickup') || v.includes('done') || v.includes('complete')) return 'ready';
+    if (v.includes('done') || v.includes('picked') || v.includes('collected') || v.includes('paid') || v.includes('deliver')) return 'done';
+    return 'not-pulled';
+  }
+
+  function statusBadge(s) {
+    const map = {
+      'not-pulled': ['s-not-pulled', 'Not Pulled'],
+      'processing': ['s-processing', 'Processing'],
+      'ready': ['s-ready', 'Ready'],
+      'done': ['s-done', 'Done'],
+    };
+    const [cls, label] = map[s] || map['not-pulled'];
+    return `<span class="sbadge ${cls}">${label}</span>`;
+  }
+
+  async function loadData() {
+    const url = localStorage.getItem(STORAGE_KEY);
+    if (!url) {
+      document.getElementById('setup-overlay').style.display = 'flex';
+      return;
+    }
+    const dot = document.getElementById('pulse-dot');
+    const label = document.getElementById('refresh-label');
+    dot.classList.add('loading');
+    label.textContent = 'UPDATING…';
+
+    try {
+      const res = await fetch(url + '&cacheBust=' + Date.now());
+      const text = await res.text();
+      const { headers, rows } = parseCSV(text);
+
+      const colName = findCol(headers, 'customer name', 'name', 'customer');
+      const colInv = findCol(headers, 'invoice', 'inv #', 'inv');
+      const colBoxes = findCol(headers, 'boxes', 'box', '# boxes');
+      const colStatus = findCol(headers, 'status', 'order status');
+      const colPaid = findCol(headers, 'paid', 'payment');
+      const colNotes = findCol(headers, 'notes', 'comments', 'comment');
+      const colNum = findCol(headers, '#', 's.no', 'no', 'num', 'seq');
+
+      // Filter rows that have a customer name
+      const orders = rows.filter(r => colName && r[colName]?.trim());
+
+      // Counts
+      const counts = { 'not-pulled': 0, 'processing': 0, 'ready': 0, 'done': 0 };
+      let totalBoxes = 0;
+      orders.forEach(r => {
+        const s = normalizeStatus(colStatus ? r[colStatus] : '');
+        counts[s]++;
+        const b = parseInt(colBoxes ? r[colBoxes] : 0);
+        if (!isNaN(b)) totalBoxes += b;
+      });
+
+      document.getElementById('cnt-total').textContent = orders.length;
+      document.getElementById('cnt-notpulled').textContent = counts['not-pulled'];
+      document.getElementById('cnt-processing').textContent = counts['processing'];
+      document.getElementById('cnt-ready').textContent = counts['ready'];
+      document.getElementById('cnt-done').textContent = counts['done'];
+      document.getElementById('total-boxes-bar').textContent = totalBoxes > 0 ? `Total Boxes: ${totalBoxes}` : '';
+
+      // Sort: not-pulled → processing → ready → done
+      const sortOrder = { 'not-pulled': 0, 'processing': 1, 'ready': 2, 'done': 3 };
+      orders.sort((a, b) => {
+        const sa = normalizeStatus(colStatus ? a[colStatus] : '');
+        const sb = normalizeStatus(colStatus ? b[colStatus] : '');
+        return sortOrder[sa] - sortOrder[sb];
+      });
+
+      const tbody = document.getElementById('orders-body');
+      if (orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div><h3>No orders yet</h3><p>Add orders to your Google Sheet to see them here.</p></div></td></tr>`;
+      } else {
+        tbody.innerHTML = orders.map((r, i) => {
+          const s = normalizeStatus(colStatus ? r[colStatus] : '');
+          const name = (colName ? r[colName] : '') || '—';
+          const inv = colInv ? r[colInv] : '';
+          const boxes = colBoxes ? r[colBoxes] : '';
+          const paid = colPaid ? r[colPaid] : '';
+          const notes = colNotes ? r[colNotes] : '';
+          const num = colNum ? r[colNum] : (i + 1);
+          return `<tr class="status-${s}">
+            <td><div class="row-inner"><span class="num">${num}</span></div></td>
+            <td><div class="row-inner" style="flex-direction:column;align-items:flex-start;gap:2px">
+              <div class="customer-name">${name}</div>
+              ${inv ? `<div class="invoice-num">${inv}</div>` : ''}
+            </div></td>
+            <td><div class="row-inner"><div class="invoice-num" style="font-size:15px">${inv || '—'}</div></div></td>
+            <td><div class="row-inner" style="flex-direction:column;align-items:center;justify-content:center">
+              <div class="boxes-count" style="color:${boxes ? 'var(--text)' : 'var(--muted)'}">${boxes || '—'}</div>
+              ${boxes ? `<div class="boxes-label">boxes</div>` : ''}
+            </div></td>
+            <td><div class="row-inner">${statusBadge(s)}</div></td>
+            <td><div class="row-inner">${paid ? `<span class="paid-tag">${paid}</span>` : '<span style="color:var(--muted);font-size:13px">—</span>'}</div></td>
+            <td><div class="row-inner"><div class="notes-text">${notes || ''}</div></div></td>
+          </tr>`;
+        }).join('');
+      }
+
+      const now = new Date();
+      document.getElementById('last-updated').textContent = `Updated ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+      dot.classList.remove('loading');
+      label.textContent = 'LIVE';
+      startCountdown();
+    } catch(e) {
+      console.error(e);
+      dot.classList.remove('loading');
+      dot.style.background = 'var(--red)';
+      label.textContent = 'ERROR';
+      document.getElementById('last-updated').textContent = 'Failed to load data';
+      setTimeout(() => loadData(), 15000);
+    }
+  }
+
+  async function connectFromSetup() {
+    const url = document.getElementById('setup-url').value.trim();
+    if (!url) return;
+    const msg = document.getElementById('setup-msg');
+    msg.textContent = 'Testing…'; msg.className = 'setup-msg';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+      localStorage.setItem(STORAGE_KEY, url);
+      document.getElementById('setup-overlay').style.display = 'none';
+      loadData();
+    } catch {
+      msg.textContent = 'Could not connect. Check the URL and try again.';
+      msg.className = 'setup-msg err';
+    }
+  }
+
+  loadData();
+</script>
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Pickup — OM Produce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06090a;
+      --surface: #0c1214;
+      --surface2: #111a1c;
+      --border: #1a2a2d;
+      --text: #cce6ec;
+      --muted: #4d6e75;
+      --accent: #00d4ff;
+      --accent-dim: #032733;
+      --green: #2ed573;
+      --green-dim: #0d2e1a;
+      --amber: #ffb300;
+      --red: #ff4050;
+      --gray: #4a5568;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .brand {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .screen-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-left: 24px;
+      padding-left: 24px;
+      border-left: 2px solid var(--border);
+    }
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    #clock {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 2px;
+    }
+    .live-indicator {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: livepulse 2s infinite;
+    }
+    @keyframes livepulse {
+      0%,100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(46,213,115,0.4); }
+      50% { opacity: 0.9; transform: scale(1.2); box-shadow: 0 0 0 6px rgba(46,213,115,0); }
+    }
+
+    /* Main layout: left = now serving, right = queue */
+    .main-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    /* === NOW SERVING === */
+    .now-serving {
+      background: var(--green-dim);
+      border-right: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .now-serving::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(46,213,115,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .ns-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 24px;
+      opacity: 0.8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ns-label::before, .ns-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(46,213,115,0.2);
+    }
+    #ns-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(48px, 7vw, 96px);
+      font-weight: 900;
+      color: #e8fef0;
+      text-align: center;
+      line-height: 1;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      word-break: break-word;
+      transition: opacity 0.3s;
+    }
+    #ns-details {
+      margin-top: 20px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .ns-pill {
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 1px;
+    }
+    .ns-pill.inv { background: rgba(46,213,115,0.12); color: var(--green); border: 1px solid rgba(46,213,115,0.2); }
+    .ns-pill.boxes { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+    .ready-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      background: var(--green);
+      color: #030e07;
+      padding: 10px 28px;
+      border-radius: 6px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .no-serving {
+      text-align: center;
+    }
+    .no-serving .icon { font-size: 56px; margin-bottom: 20px; opacity: 0.4; }
+    .no-serving h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .no-serving p { color: var(--muted); margin-top: 10px; font-size: 16px; }
+
+    /* === QUEUE === */
+    .queue-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .queue-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .queue-header-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .queue-count {
+      background: rgba(0,212,255,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 20px;
+      padding: 3px 14px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .queue-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+    .queue-scroll::-webkit-scrollbar { width: 4px; }
+    .queue-scroll::-webkit-scrollbar-track { background: transparent; }
+    .queue-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .queue-item {
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: background 0.2s;
+    }
+    .queue-item:hover { background: var(--surface2); }
+    .queue-item:last-child { border-bottom: none; }
+    .q-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--muted);
+      min-width: 44px;
+    }
+    .q-info { flex: 1; }
+    .q-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: 0.5px;
+    }
+    .q-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 3px;
+      display: flex; gap: 12px; align-items: center;
+    }
+    .q-boxes {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--accent);
+    }
+    .q-status-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .qbadge-processing { background: rgba(255,179,0,0.12); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
+    .qbadge-not-pulled { background: rgba(255,64,80,0.1); color: var(--red); border: 1px solid rgba(255,64,80,0.15); }
+    .qbadge-done { background: rgba(74,85,104,0.2); color: var(--gray); border: 1px solid rgba(74,85,104,0.15); }
+
+    /* Sections inside queue */
+    .section-divider {
+      padding: 8px 32px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Done section (dimmed) */
+    .queue-item.is-done { opacity: 0.5; }
+
+    /* Bottom bar */
+    .bottombar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 40px;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    #last-update-note { margin-left: auto; }
+    #countdown-display { color: var(--accent); margin-left: 8px; }
+
+    /* Setup overlay */
+    .setup-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6, 9, 10, 0.97);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .setup-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 48px;
+      max-width: 560px;
+      text-align: center;
+    }
+    .setup-box h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .setup-box p { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+    .setup-url-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .setup-url-input:focus { border-color: var(--accent); }
+    .btn-connect {
+      background: var(--accent);
+      color: #06090a;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-connect:hover { filter: brightness(1.1); }
+    .setup-err { margin-top: 10px; font-size: 13px; color: var(--red); min-height: 18px; }
+
+    /* Empty queue */
+    .queue-empty {
+      text-align: center;
+      padding: 60px 32px;
+      color: var(--muted);
+    }
+    .queue-empty .icon { font-size: 36px; opacity: 0.4; margin-bottom: 12px; }
+    .queue-empty p { font-size: 15px; line-height: 1.6; }
+
+    /* Flicker animation for "now serving" change */
+    @keyframes nameIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .name-enter { animation: nameIn 0.4s ease-out; }
+  </style>
+</head>
+<body>
+
+  <!-- Setup Overlay -->
+  <div class="setup-overlay" id="setup-overlay" style="display:none">
+    <div class="setup-box">
+      <div style="font-size: 40px; margin-bottom: 16px;">🛒</div>
+      <h1>Customer Pickup</h1>
+      <p>Enter your Google Sheet CSV URL to show the live pickup queue on this screen.</p>
+      <input class="setup-url-input" id="setup-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv" />
+      <button class="btn-connect" onclick="connectFromSetup()">Connect Display</button>
+      <div class="setup-err" id="setup-err"></div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">OM Produce</div>
+    <div class="screen-title">🛒 Customer Pickup</div>
+    <div class="header-right">
+      <div class="live-indicator">
+        <div class="live-dot"></div>
+        <span id="live-label">Live</span>
+      </div>
+      <div id="clock">--:--</div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+
+    <!-- NOW SERVING -->
+    <div class="now-serving">
+      <div class="ns-label">Now Serving</div>
+      <div id="serving-section">
+        <!-- Populated by JS -->
+        <div class="no-serving">
+          <div class="icon">⏳</div>
+          <h2>Loading…</h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUEUE -->
+    <div class="queue-panel">
+      <div class="queue-header">
+        <div class="queue-header-label">Next Up</div>
+        <div class="queue-count" id="queue-count">0</div>
+        <div style="margin-left: auto; font-size: 13px; color: var(--muted);" id="total-summary"></div>
+      </div>
+      <div class="queue-scroll" id="queue-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottombar">
+    <span>OM Produce Display System</span>
+    <span id="last-update-note">—</span>
+    <span id="countdown-display"></span>
+    <a href="index.html" style="color:var(--muted); text-decoration:none; margin-left: 24px;">⚙ Settings</a>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'om_produce_sheet_url';
+  const REFRESH_INTERVAL = 30;
+  let countdownVal = REFRESH_INTERVAL;
+  let refreshTimer = null;
+  let lastNsName = '';
+
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('clock').textContent = `${h}:${m}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function startCountdown() {
+    countdownVal = REFRESH_INTERVAL;
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      countdownVal--;
+      if (countdownVal <= 0) {
+        loadData();
+        countdownVal = REFRESH_INTERVAL;
+      }
+      document.getElementById('countdown-display').textContent = `· Refresh in ${countdownVal}s`;
+    }, 1000);
+  }
+
+  function parseCSV(text) {
+    const lines = text.split('\n');
+    function splitRow(line) {
+      const vals = []; let cur = ''; let inQ = false;
+      for (let c of line) {
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      vals.push(cur.trim());
+      return vals.map(v => v.replace(/^"|"$/g, '').trim());
+    }
+    let headerIdx = 0;
+    for (let i = 0; i < Math.min(8, lines.length); i++) {
+      const l = lines[i].toLowerCase();
+      if (l.includes('customer') || l.includes('name') || l.includes('status')) { headerIdx = i; break; }
+    }
+    const headers = splitRow(lines[headerIdx]);
+    const rows = [];
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = splitRow(lines[i]);
+      if (vals.every(v => !v)) continue;
+      const row = {};
+      headers.forEach((h, j) => row[h] = vals[j] || '');
+      rows.push(row);
+    }
+    return { headers, rows };
+  }
+
+  function findCol(headers, ...keys) {
+    for (let k of keys) {
+      const found = headers.find(h => h.toLowerCase().includes(k.toLowerCase()));
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function normalizeStatus(val) {
+    if (!val) return 'not-pulled';
+    const v = val.toLowerCase().trim();
+    if (v.includes('not') || v.includes('unpull') || v === '') return 'not-pulled';
+    if (v.includes('process') || v.includes('progress') || v.includes('working') || v.includes('pull')) return 'processing';
+    if (v.includes('ready') || v === 'ready for pickup') return 'ready';
+    if (v.includes('done') || v.includes('picked') || v.includes('collect') || v.includes('deliver') || v.includes('complete')) return 'done';
+    return 'not-pulled';
+  }
+
+  function renderServing(order) {
+    if (!order) {
+      document.getElementById('serving-section').innerHTML = `
+        <div class="no-serving">
+          <div class="icon">⏰</div>
+          <h2>No Orders Ready</h2>
+          <p>Orders will appear here when marked Ready.</p>
+        </div>`;
+      lastNsName = '';
+      return;
+    }
+    const changed = lastNsName !== order.name;
+    lastNsName = order.name;
+    const animClass = changed ? 'name-enter' : '';
+    document.getElementById('serving-section').innerHTML = `
+      <div id="ns-name" class="${animClass}">${order.name.toUpperCase()}</div>
+      <div id="ns-details">
+        ${order.inv ? `<div class="ns-pill inv"># ${order.inv}</div>` : ''}
+        ${order.boxes ? `<div class="ns-pill boxes">📦 ${order.boxes} Boxes</div>` : ''}
+      </div>
+      <div class="ready-badge">✓ Ready for Pickup</div>`;
+  }
+
+  function renderQueue(orders) {
+    const ready = orders.filter(o => o.status === 'ready');
+    const processing = orders.filter(o => o.status === 'processing');
+    const notPulled = orders.filter(o => o.status === 'not-pulled');
+    const done = orders.filter(o => o.status === 'done');
+
+    const queueItems = [...ready.slice(1), ...processing, ...notPulled];
+    document.getElementById('queue-count').textContent = queueItems.length;
+
+    const total = orders.length;
+    const readyCount = ready.length;
+    document.getElementById('total-summary').textContent = `${readyCount} of ${total} ready`;
+
+    let html = '';
+
+    if (ready.length > 1) {
+      html += `<div class="section-divider">Ready — Waiting</div>`;
+      html += ready.slice(1).map((o, i) => queueItemHTML(o, i + 2, 'ready')).join('');
+    }
+
+    if (processing.length > 0) {
+      html += `<div class="section-divider">Being Processed</div>`;
+      html += processing.map((o, i) => queueItemHTML(o, null, 'processing')).join('');
+    }
+
+    if (notPulled.length > 0) {
+      html += `<div class="section-divider">Not Pulled Yet</div>`;
+      html += notPulled.map((o) => queueItemHTML(o, null, 'not-pulled')).join('');
+    }
+
+    if (done.length > 0) {
+      html += `<div class="section-divider">Picked Up — Done</div>`;
+      html += done.map((o) => queueItemHTML(o, null, 'done', true)).join('');
+    }
+
+    if (!html) {
+      html = `<div class="queue-empty"><div class="icon">📋</div><p>No orders in queue.<br>Add orders to your Google Sheet to begin.</p></div>`;
+    }
+
+    document.getElementById('queue-list').innerHTML = html;
+  }
+
+  function queueItemHTML(o, position, status, isDone = false) {
+    const badgeClass = status === 'processing' ? 'qbadge-processing' : status === 'not-pulled' ? 'qbadge-not-pulled' : status === 'done' ? 'qbadge-done' : '';
+    const badgeLabel = status === 'processing' ? 'Processing' : status === 'not-pulled' ? 'Not Pulled' : status === 'done' ? 'Done' : '';
+    const posLabel = position ? `<span class="q-num">${position}</span>` : `<span class="q-num" style="opacity:0.3">—</span>`;
+    return `<div class="queue-item ${isDone ? 'is-done' : ''}">
+      ${posLabel}
+      <div class="q-info">
+        <div class="q-name">${o.name}</div>
+        <div class="q-sub">
+          ${o.inv ? `<span>${o.inv}</span>` : ''}
+          ${o.boxes ? `<span class="q-boxes">📦 ${o.boxes}</span>` : ''}
+          ${badgeClass ? `<span class="q-status-badge ${badgeClass}">${badgeLabel}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  async function loadData() {
+    const url = localStorage.getItem(STORAGE_KEY);
+    if (!url) {
+      document.getElementById('setup-overlay').style.display = 'flex';
+      return;
+    }
+    const liveLabel = document.getElementById('live-label');
+    liveLabel.textContent = 'Updating…';
+
+    try {
+      const res = await fetch(url + '&cacheBust=' + Date.now());
+      const text = await res.text();
+      const { headers, rows } = parseCSV(text);
+
+      const colName = findCol(headers, 'customer name', 'name', 'customer');
+      const colInv = findCol(headers, 'invoice', 'inv');
+      const colBoxes = findCol(headers, 'boxes', 'box');
+      const colStatus = findCol(headers, 'status', 'order status');
+
+      const orders = rows
+        .filter(r => colName && r[colName]?.trim())
+        .map(r => ({
+          name: r[colName] || '',
+          inv: colInv ? r[colInv] : '',
+          boxes: colBoxes ? r[colBoxes] : '',
+          status: normalizeStatus(colStatus ? r[colStatus] : ''),
+          raw: r
+        }));
+
+      const sortOrder = { 'ready': 0, 'processing': 1, 'not-pulled': 2, 'done': 3 };
+      orders.sort((a, b) => sortOrder[a.status] - sortOrder[b.status]);
+
+      const readyOrders = orders.filter(o => o.status === 'ready');
+      renderServing(readyOrders[0] || null);
+      renderQueue(orders);
+
+      const now = new Date();
+      document.getElementById('last-update-note').textContent = `Updated ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+      liveLabel.textContent = 'Live';
+      startCountdown();
+    } catch(e) {
+      console.error(e);
+      liveLabel.textContent = 'Error';
+      document.getElementById('last-update-note').textContent = 'Failed to load — retrying…';
+      setTimeout(() => loadData(), 15000);
+    }
+  }
+
+  async function connectFromSetup() {
+    const url = document.getElementById('setup-url').value.trim();
+    if (!url) return;
+    const err = document.getElementById('setup-err');
+    err.textContent = 'Connecting…';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+      localStorage.setItem(STORAGE_KEY, url);
+      document.getElementById('setup-overlay').style.display = 'none';
+      loadData();
+    } catch {
+      err.textContent = 'Connection failed. Check URL and ensure the sheet is published publicly.';
+    }
+  }
+
+  loadData();
+</script>
+</body>
+</html>
