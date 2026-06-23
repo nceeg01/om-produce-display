@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — OM Produce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/base.css">
+  <style>
+    body { min-height: 100%; }
+    .page { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .sec-title { font-family: var(--f-head); font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 26px 0 12px; display: flex; align-items: center; gap: 12px; }
+    .sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .kpi { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .kpi .v { font-family: var(--f-head); font-size: 38px; font-weight: 900; line-height: 1; color: var(--text); }
+    .kpi .v.orange { color: var(--orange); }
+    .kpi .v.olive { color: var(--olive); }
+    .kpi .l { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+    .kpi .sub { font-size: 12px; color: var(--muted2); margin-top: 4px; }
+
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .chart { width: 100%; }
+    .bar { fill: var(--orange); }
+    .bar-lbl { font-size: 10px; fill: var(--muted); font-family: var(--f-body); }
+    .bar-val { font-size: 10px; fill: var(--text); font-family: var(--f-head); font-weight: 700; }
+    .axis { stroke: var(--border); stroke-width: 1; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 9px 12px; font-family: var(--f-head); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); border-bottom: 1px solid var(--border); }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    td.num { font-family: var(--f-head); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo-wrap">
+      <div class="logo-sq">OM</div>
+      <div class="logo-name"><em>OM</em> Produce</div>
+    </div>
+    <div class="screen-tag">📊 Analytics</div>
+    <div class="tb-right">
+      <span class="demo-tag" id="demo" style="display:none">DEMO DATA</span>
+      <div class="live-pill" id="lpill"><div class="ldot"></div><span id="ltxt">LIVE</span></div>
+      <a href="index.html" style="color:var(--muted);text-decoration:none;font-size:12px">⚙ Settings</a>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="sec-title">Today at a Glance</div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="sec-title">Throughput by Hour — Orders Completed</div>
+    <div class="card"><svg id="chart" class="chart" viewBox="0 0 1040 240" preserveAspectRatio="xMidYMid meet"></svg></div>
+
+    <div class="sec-title">Slowest Orders — Longest Pull Time</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Order</th><th>Customer</th><th>Boxes</th><th>Pull time</th><th>Total cycle</th></tr></thead>
+        <tbody id="slow"></tbody>
+      </table>
+    </div>
+
+    <div style="text-align:center;color:var(--muted2);font-size:12px;margin:28px 0 12px">
+      Analytics are computed from the <strong>LOG</strong> history (completed orders). Updates every 30s.
+    </div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/sample.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/analytics.js"></script>
+</body>
+</html>

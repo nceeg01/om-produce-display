@@ -1,0 +1,44 @@
+/* ============================================================
+   OM Produce — Design Tokens (single source of truth)
+   Brand palette + typography shared by every page.
+   ============================================================ */
+:root {
+  /* Neutrals */
+  --bg:       #FFFFFF;
+  --surface:  #FAFAF8;
+  --surface2: #F3F0EC;
+  --border:   #E8E2DA;
+  --border2:  #D5CEC4;
+  --text:     #1C1710;
+  --muted:    #9A8B78;
+  --muted2:   #C4B8A8;
+
+  /* Brand */
+  --orange:   #E8711A;
+  --orange-l: #FFF3EA;
+  --orange-m: #FDE0C4;
+
+  /* Status accents */
+  --olive:    #4A7A20;  /* ready / live / ok      */
+  --olive-l:  #EEF7E5;
+  --olive-m:  #C8E6A8;
+  --red:      #C0321E;  /* received / error       */
+  --red-l:    #FFF0EE;
+  --red-m:    #F5C0BA;
+  --amber:    #B07808;  /* pulling / processing   */
+  --amber-l:  #FFF8E5;
+  --amber-m:  #F5D98A;
+  --blue:     #2563A8;  /* invoiced               */
+  --blue-l:   #EAF2FB;
+  --blue-m:   #BCD6F0;
+  --gray:     #7A6E64;  /* done                   */
+  --gray-l:   #F3F0EC;
+
+  /* Typography */
+  --f-head: 'Barlow Condensed', sans-serif;
+  --f-body: 'Barlow', sans-serif;
+
+  /* Rhythm */
+  --radius: 8px;
+  --radius-sm: 6px;
+}
