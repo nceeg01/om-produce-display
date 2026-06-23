@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Check-in — OM Produce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/base.css">
+  <style>
+    html, body { height: 100%; }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+    .main { flex: 1; display: grid; grid-template-columns: 1.6fr 1fr; overflow: hidden; }
+    .col { display: flex; flex-direction: column; overflow: hidden; }
+    .col.queue { border-right: 1px solid var(--border); }
+    .col-hd { display: flex; align-items: center; gap: 12px; padding: 12px 24px; flex-shrink: 0; background: #fff; border-bottom: 1px solid var(--border); }
+    .col-hd .t { font-family: var(--f-head); font-size: 17px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .col-hd .cnt { margin-left: auto; font-family: var(--f-head); font-size: 14px; font-weight: 800; color: var(--muted); }
+    .search { margin: 10px 24px 0; }
+    .search input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 14px; outline: none; }
+    .search input:focus { border-color: var(--orange); }
+    .list { flex: 1; overflow-y: auto; padding: 12px 18px 24px; }
+
+    .qrow { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border-left: 5px solid var(--border2); }
+    .qrow.received { border-left-color: var(--red); }
+    .qrow.pulling  { border-left-color: var(--amber); }
+    .qrow.ready    { border-left-color: var(--olive); }
+    .qrow.invoiced { border-left-color: var(--blue); }
+    .qpos { font-family: var(--f-head); font-size: 22px; font-weight: 900; color: var(--muted2); min-width: 28px; text-align: center; }
+    .qmid { flex: 1; min-width: 0; }
+    .qnm { font-family: var(--f-head); font-size: 24px; font-weight: 800; line-height: 1; }
+    .qsub { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 11px; color: var(--muted); }
+    .arr { color: var(--olive); font-weight: 700; }
+    .qact { display: flex; align-items: center; gap: 6px; }
+    .here-btn { border: 1px solid var(--olive-m); background: #fff; color: var(--olive); font-family: var(--f-head); font-weight: 800; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+    .here-btn.on { background: var(--olive); color: #fff; }
+    .mvbtn { width: 36px; height: 32px; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; font-size: 16px; cursor: pointer; color: var(--text); }
+    .mvbtn:active { background: var(--surface2); }
+    .mvcol { display: flex; flex-direction: column; gap: 3px; }
+
+    .add { padding: 18px 22px; }
+    .add label { display: block; font-family: var(--f-head); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
+    .add input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 16px; outline: none; }
+    .add input:focus { border-color: var(--orange); }
+    .add .big-name { font-size: 22px; font-family: var(--f-head); font-weight: 700; }
+    .add-btn { width: 100%; margin-top: 16px; background: var(--orange); color: #fff; border: none; border-radius: 10px; padding: 16px; font-family: var(--f-head); font-size: 18px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+    .add-btn:active { filter: brightness(.96); }
+    .add-hint { font-size: 12px; color: var(--muted2); margin-top: 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo-wrap"><div class="logo-sq">OM</div><div class="logo-name"><em>OM</em> Produce</div></div>
+    <div class="screen-tag">🙋 Check-in &amp; Queue</div>
+    <div class="tb-right">
+      <div class="live-pill" id="lpill"><div class="ldot"></div><span id="ltxt">LIVE</span></div>
+      <div class="clock-wrap"><div class="clock" id="clk">--:--</div><div class="dateline" id="dln">—</div></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="col queue">
+      <div class="col-hd"><span class="t">Today's Queue</span><span class="cnt" id="qcnt">0</span></div>
+      <div class="search"><input id="search" placeholder="Filter by customer name…"></div>
+      <div class="list scroll" id="qlist"></div>
+    </div>
+    <div class="col">
+      <div class="col-hd"><span class="t">Quick Add Walk-in</span></div>
+      <div class="add">
+        <label>Customer name</label>
+        <input class="big-name" id="qa-name" placeholder="e.g. Arora Market">
+        <label>Add-on (optional)</label>
+        <input id="qa-addon" placeholder="e.g. Ice pack">
+        <button class="add-btn" id="qa-go">+ Add &amp; Check In</button>
+        <div class="add-hint">Adds the order at the front of the queue and marks the customer as <strong>here now</strong>. Warehouse sees it immediately.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btm">
+    <span class="demo-tag" id="demo" style="display:none">DEMO — changes are local only</span>
+    <div class="btm-r"><span id="last-upd">—</span><span id="cdown"></span><a href="index.html">⚙ Settings</a></div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/sample.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/checkin.js"></script>
+</body>
+</html>

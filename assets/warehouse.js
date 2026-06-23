@@ -39,6 +39,7 @@
     var left = el('div');
     left.appendChild(el('div', 'cust', o.customer || '—'));
     if (o.id) left.appendChild(el('div', 'oid', o.id));
+    if (o.checkedInAt) { var a = el('div', 'oid', '✓ here ' + OM.fmtTime(o.checkedInAt)); a.style.color = 'var(--olive)'; left.appendChild(a); }
     top.appendChild(left);
 
     if (o.boxes > 0) {
@@ -94,6 +95,7 @@
     });
     document.getElementById('boxtotal').textContent = boxTotal;
     document.getElementById('avgpull').textContent = avgPull(orders);
+    renderPrep(orders);
 
     if (!orders.length) {
       var em = el('div', 'empty');
@@ -105,8 +107,7 @@
     }
 
     GROUPS.forEach(function (g) {
-      var list = orders.filter(function (o) { return o.status === g.key; })
-        .sort(function (a, b) { return a.created - b.created; }); // FIFO
+      var list = OM.sortOrders(orders.filter(function (o) { return o.status === g.key; }));
       if (!list.length) return;
       var grp = el('div', 'group');
       var hd = el('div', 'group-hd');
@@ -117,6 +118,22 @@
       list.forEach(function (o) { cards.appendChild(card(o)); });
       grp.appendChild(cards);
       board.appendChild(grp);
+    });
+  }
+
+  // "Now Pulling" strip — the (≤3) orders the warehouse flagged.
+  function renderPrep(orders) {
+    var pulling = orders.filter(function (o) { return o.nowPulling; });
+    var strip = document.getElementById('prep');
+    var list = document.getElementById('prep-list');
+    list.innerHTML = '';
+    if (!pulling.length) { strip.style.display = 'none'; return; }
+    strip.style.display = '';
+    pulling.forEach(function (o) {
+      var c = el('div', 'prep-card');
+      c.appendChild(el('span', 'nm', o.customer || '—'));
+      if (o.t.pulling) c.appendChild(el('span', 'tm', OM.fmtDuration(OM.pullElapsedMs(o))));
+      list.appendChild(c);
     });
   }
 
@@ -136,6 +153,7 @@
 
   OM.startPolling({
     view: 'warehouse',
+    refresh: cfg.refreshTv,
     onData: function (res) {
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
       document.getElementById('ov').style.display = 'none';

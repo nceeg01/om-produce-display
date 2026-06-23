@@ -57,6 +57,24 @@
     return h > 0 ? h + 'h ' + pad(m) + 'm' : m + 'm';
   }
 
+  /* Date / time helpers — "23/06/2026 | 9:32 am" */
+  function fmtTime(ms) {
+    if (!ms) return '';
+    var d = new Date(ms), h = d.getHours(), m = d.getMinutes();
+    var ap = h >= 12 ? 'pm' : 'am';
+    var h12 = h % 12 || 12;
+    return h12 + ':' + pad(m) + ' ' + ap;
+  }
+  function fmtDate(ms) {
+    if (!ms) return '';
+    var d = new Date(ms);
+    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+  }
+  function fmtDateTime(ms) {
+    if (!ms) return '';
+    return fmtDate(ms) + ' | ' + fmtTime(ms);
+  }
+
   /* ── Order normalization ─────────────────────────────────── */
   /* Accepts a raw order object from the Web App (or sample data)
      with flexible keys, returns a clean normalized record. */
@@ -72,6 +90,7 @@
       .map(function (a) { return String(a).trim(); })
       .filter(Boolean);
     var rawStatus = pick('status', 'Status');
+    var qp = pick('queuePos', 'QueuePos');
     return {
       id: String(pick('id', 'orderId', 'OrderID') || ''),
       customer: String(pick('customer', 'Customer', 'name') || '').trim(),
@@ -83,6 +102,9 @@
       notes: String(pick('notes', 'Notes') || '').trim(),
       created: toMs(pick('created', 'Created')),
       waitSetAt: toMs(pick('waitSetAt', 'wait_set_at')),
+      queuePos: (qp === '' || qp == null) ? null : Number(qp),
+      nowPulling: truthy(pick('nowPulling', 'NowPulling')),
+      checkedInAt: toMs(pick('checkedInAt', 'CheckedInAt')),
       t: {
         received: toMs(pick('t_received')),
         pulling: toMs(pick('t_pulling')),
@@ -90,7 +112,32 @@
         invoiced: toMs(pick('t_invoiced')),
         done: toMs(pick('t_done')),
       },
+      // Analytics (LOG) precomputed fields, present only for view=analytics rows
+      pullMin: numOrNull(pick('pullMin')),
+      waitToPullMin: numOrNull(pick('waitToPullMin')),
+      cycleMin: numOrNull(pick('cycleMin')),
+      summary: String(pick('summary') || ''),
+      date: String(pick('date') || ''),
     };
+  }
+  function truthy(v) { return v === true || v === 1 || String(v).toLowerCase() === 'true'; }
+  function numOrNull(v) { if (v == null || v === '') return null; var n = Number(v); return isNaN(n) ? null : n; }
+
+  /* Canonical ordering used by EVERY page:
+     now-pulling first, then op3 manual queue, then arrival, then FIFO. */
+  function sortOrders(list) {
+    return list.slice().sort(function (a, b) {
+      if (a.nowPulling !== b.nowPulling) return a.nowPulling ? -1 : 1;
+      var aq = a.queuePos, bq = b.queuePos;
+      if (aq != null && bq != null && aq !== bq) return aq - bq;
+      if (aq != null && bq == null) return -1;
+      if (aq == null && bq != null) return 1;
+      var ac = a.checkedInAt || 0, bc = b.checkedInAt || 0;
+      if (ac && bc && ac !== bc) return ac - bc;
+      if (ac && !bc) return -1;
+      if (!ac && bc) return 1;
+      return (a.created || 0) - (b.created || 0);
+    });
   }
 
   /* ── ETA & pull-timer math (uses server clock to avoid TV drift) ─ */
@@ -154,11 +201,9 @@
   function fetchData(view) {
     var cfg = getConfig();
     if (!cfg.url) {
-      var demo = global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() };
-      demo.demo = true;
-      setServerNow(demo.serverNow);
-      demo.orders = demo.orders.map(normOrder);
-      return Promise.resolve(demo);
+      var d = global.__OM_DEMO || (global.__OM_DEMO = (global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() }));
+      setServerNow(Date.now());
+      return Promise.resolve({ orders: d.orders.map(normOrder), serverNow: Date.now(), demo: true });
     }
     var url = buildUrl(cfg.url, view, cfg.token);
 
@@ -186,11 +231,57 @@
       });
   }
 
+  /* ── Write API (doPost; text/plain to avoid CORS preflight) ── */
+  /* post('setStatus', {orderId, status}) → resolves to { orders, serverNow }
+     In DEMO mode (no URL) it mutates the in-memory sample and returns it. */
+  function post(action, payload) {
+    var cfg = getConfig();
+    payload = payload || {};
+    if (!cfg.url) return Promise.resolve(demoMutate(action, payload));
+    var body = Object.assign({ action: action, key: cfg.token, pin: cfg.pin }, payload);
+    return fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // simple request → no preflight
+      body: JSON.stringify(body),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || data.ok === false) {
+          var e = new Error((data && data.message) || (data && data.error) || 'Write failed');
+          e.code = data && data.error;
+          throw e;
+        }
+        setServerNow(data.serverNow);
+        return { orders: (data.orders || []).map(normOrder), serverNow: data.serverNow };
+      });
+  }
+
+  /* Apply a write to the in-memory demo dataset so DEMO mode is interactive. */
+  function demoMutate(action, p) {
+    var d = global.__OM_DEMO || (global.__OM_DEMO = (global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() }));
+    var now = Date.now();
+    function find(id) { return d.orders.filter(function (o) { return String(o.id) === String(p.orderId); })[0]; }
+    var o = find(p.orderId);
+    if (action === 'setStatus' && o) { o.status = p.status; o['t_' + normStatus(p.status)] = o['t_' + normStatus(p.status)] || now; if (normStatus(p.status) !== 'pulling') o.NowPulling = ''; }
+    else if (action === 'setBoxes' && o) o.boxes = Math.max(0, parseInt(p.boxes, 10) || 0);
+    else if (action === 'setWait' && o) { o.waitMin = Math.max(0, parseInt(p.waitMin, 10) || 0); o.wait_set_at = now; }
+    else if (action === 'togglePull' && o) {
+      var cnt = d.orders.filter(function (x) { return truthy(x.NowPulling); }).length;
+      if (p.on && cnt >= getConfig().maxPulling && !truthy(o.NowPulling)) { var e = new Error('Max ' + getConfig().maxPulling + ' being pulled'); e.code = 'max'; return Promise.reject(e); }
+      o.NowPulling = p.on ? 'TRUE' : ''; if (p.on) { o.status = 'Pulling'; o.t_pulling = o.t_pulling || now; }
+    }
+    else if (action === 'checkIn' && o) o.CheckedInAt = now;
+    else if (action === 'reorder') (p.orderIds || []).forEach(function (id, i) { var x = d.orders.filter(function (q) { return String(q.id) === String(id); })[0]; if (x) x.QueuePos = i + 1; });
+    else if (action === 'quickAdd') d.orders.unshift({ id: 'WALK-' + String(now).slice(-4), customer: p.customer, status: 'Received', boxes: 0, created: now, CheckedInAt: now, QueuePos: 0, t_received: now, addon1: (p.addons || [])[0] || '' });
+    setServerNow(now);
+    return { orders: d.orders.map(normOrder), serverNow: now, demo: true };
+  }
+
   /* ── Polling loop with countdown ─────────────────────────── */
-  /* opts: { view, onData(result), onError(err), onTick(secondsLeft) } */
+  /* opts: { view, refresh, onData(result), onError(err), onTick(secondsLeft) } */
   function startPolling(opts) {
     var cfg = getConfig();
-    var period = cfg.refreshSeconds;
+    var period = opts.refresh || cfg.refreshTv;
     var left = period, tickTimer = null;
 
     function load() {
@@ -224,7 +315,9 @@
     STATUS: STATUS,
     normStatus: normStatus,
     normOrder: normOrder,
+    sortOrders: sortOrders,
     fetchData: fetchData,
+    post: post,
     startPolling: startPolling,
     startClock: startClock,
     effectiveNow: effectiveNow,
@@ -232,6 +325,9 @@
     fmtEta: fmtEta,
     pullElapsedMs: pullElapsedMs,
     fmtDuration: fmtDuration,
+    fmtDateTime: fmtDateTime,
+    fmtTime: fmtTime,
+    fmtDate: fmtDate,
     toInt: toInt,
     pad: pad,
   };

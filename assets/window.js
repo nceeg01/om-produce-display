@@ -22,6 +22,7 @@
     info.appendChild(el('div', 'nm', o.customer || '—'));
     var meta = el('div', 'meta');
     if (o.id) meta.appendChild(el('span', 'oid', o.id));
+    if (o.checkedInAt) { var a = el('span', null, '✓ ' + OM.fmtTime(o.checkedInAt)); a.style.color = 'var(--olive)'; a.style.fontWeight = '700'; meta.appendChild(a); }
     if (o.boxes > 0) meta.appendChild(el('span', 'bx', '📦 ' + o.boxes));
     o.addons.forEach(function (a) { meta.appendChild(el('span', 'addon', a)); });
     info.appendChild(meta);
@@ -47,10 +48,8 @@
   function render(orders) {
     lastOrders = orders;
     // "Ready to invoice" = ready but not yet invoiced/done.
-    var toInvoice = orders.filter(function (o) { return o.status === 'ready'; })
-      .sort(function (a, b) { return a.created - b.created; });
-    var pulling = orders.filter(function (o) { return o.status === 'pulling'; })
-      .sort(function (a, b) { return a.created - b.created; });
+    var toInvoice = OM.sortOrders(orders.filter(function (o) { return o.status === 'ready'; }));
+    var pulling = OM.sortOrders(orders.filter(function (o) { return o.status === 'pulling'; }));
 
     document.getElementById('inv-cnt').textContent = toInvoice.length;
     document.getElementById('nx-cnt').textContent = pulling.length;
@@ -83,6 +82,7 @@
 
   OM.startPolling({
     view: 'warehouse',
+    refresh: cfg.refreshTv,
     onData: function (res) {
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
       document.getElementById('ov').style.display = 'none';
