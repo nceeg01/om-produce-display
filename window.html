@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pickup Window — OM Produce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/base.css">
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    .main { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; overflow: hidden; }
+    .col { display: flex; flex-direction: column; overflow: hidden; }
+    .col.invoice { border-right: 1px solid var(--border); background: linear-gradient(160deg, #fff 70%, #FFF8F0 100%); }
+    .col-hd { display: flex; align-items: center; gap: 12px; padding: 14px 28px; flex-shrink: 0; background: #fff; border-bottom: 1px solid var(--border); }
+    .col-hd .t { font-family: var(--f-head); font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .col-hd .t.go { color: var(--olive); }
+    .col-hd .t.next { color: var(--muted); }
+    .col-hd .cnt { font-family: var(--f-head); font-size: 16px; font-weight: 800; padding: 2px 12px; border-radius: 20px; }
+    .col-hd .cnt.go { background: var(--olive-l); color: var(--olive); border: 1px solid var(--olive-m); }
+    .col-hd .cnt.next { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+    .list { flex: 1; overflow-y: auto; padding: 14px 20px 24px; }
+
+    .inv-row { display: flex; align-items: center; gap: 16px; background: #fff; border: 1px solid var(--olive-m); border-left: 5px solid var(--olive); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px; }
+    .inv-row .pos { font-family: var(--f-head); font-size: 22px; font-weight: 900; color: var(--muted2); min-width: 30px; }
+    .inv-row .info { flex: 1; }
+    .inv-row .nm { font-family: var(--f-head); font-size: 30px; font-weight: 800; line-height: 1; }
+    .inv-row .meta { display: flex; gap: 12px; align-items: center; margin-top: 5px; font-size: 12px; color: var(--muted); }
+    .inv-row .meta .oid { font-family: monospace; }
+    .inv-row .meta .bx { font-family: var(--f-head); font-weight: 800; color: var(--orange); font-size: 15px; }
+    .inv-row .addon { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; font-size: 11px; color: var(--text); }
+    .inv-row .wait { margin-left: auto; }
+
+    .nx-row { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--amber); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 8px; }
+    .nx-row .nm { font-family: var(--f-head); font-size: 22px; font-weight: 800; }
+    .nx-row .eta { margin-left: auto; font-family: var(--f-head); font-size: 13px; font-weight: 700; color: var(--amber); }
+    .nx-row .bx { font-family: var(--f-head); font-weight: 800; color: var(--orange); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="ov" id="ov" style="display:none">
+    <div class="ovb">
+      <div class="ov-icon">OM</div>
+      <h1>Pickup Window</h1>
+      <p>Not configured yet. Open <strong>Settings</strong> to connect the data source.</p>
+      <a class="ov-btn" href="index.html" style="display:block;text-decoration:none">Open Settings</a>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="logo-wrap">
+      <div class="logo-sq">OM</div>
+      <div class="logo-name"><em>OM</em> Produce</div>
+    </div>
+    <div class="screen-tag">🧾 Pickup Window</div>
+    <div class="tb-right">
+      <div class="live-pill" id="lpill"><div class="ldot"></div><span id="ltxt">LIVE</span></div>
+      <div class="clock-wrap"><div class="clock" id="clk">--:--</div><div class="dateline" id="dln">—</div></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="col invoice">
+      <div class="col-hd">
+        <span class="t go">✓ Ready to Invoice</span>
+        <span class="cnt go" id="inv-cnt">0</span>
+      </div>
+      <div class="list scroll" id="inv-list"></div>
+    </div>
+    <div class="col">
+      <div class="col-hd">
+        <span class="t next">Coming Up — Pulling</span>
+        <span class="cnt next" id="nx-cnt">0</span>
+      </div>
+      <div class="list scroll" id="nx-list"></div>
+    </div>
+  </div>
+
+  <div class="btm">
+    <span class="demo-tag" id="demo" style="display:none">DEMO DATA</span>
+    <span>Invoice every order on the left, then mark it <strong>Invoiced</strong> in the sheet.</span>
+    <div class="btm-r">
+      <span id="last-upd">—</span>
+      <span id="cdown"></span>
+      <a href="index.html">⚙ Settings</a>
+    </div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/sample.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/window.js"></script>
+</body>
+</html>

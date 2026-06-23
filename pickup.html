@@ -6,349 +6,101 @@
   <title>Customer Pickup — OM Produce</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/base.css">
   <style>
-    :root {
-      --olive-m:  #C8E6A8;
-      --red:      #C0321E;
-      --red-l:    #FFF0EE;
-      --amber:    #B07808;
-      --amber-l:  #FFF8E5;
-      --gray:     #7A6E64;
-      --gray-l:   #F3F0EC;
-      --bg:       #FFFFFF;
-      --text:     #000000;
-      --surface:  #FFFFFF;
-      --surface2: #F9F9F9;
-      --border:   #E5E5E5;
-      --border2:  #D0D0D0;
-      --muted:    #888888;
-      --muted2:   #AAAAAA;
-      --olive:    #4A7A20;
-      --olive-l:  #E8F5E9;
-      --orange:   #E67E22;
-      --orange-m: #F0B876;
-      --orange-l: #FFF0E5;
-    }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html,body { height:100%; overflow:hidden; }
-    body { background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; display:flex; flex-direction:column; }
+    html, body { height: 100%; overflow: hidden; }
+    body { display: flex; flex-direction: column; }
 
-    /* ── HEADER ── */
-    .hdr {
-      display:flex; align-items:center; height:60px; flex-shrink:0;
-      background:#fff; border-bottom:3px solid var(--orange); padding:0 32px;
-      box-shadow:0 1px 0 var(--border);
-    }
-    .logo-w { display:flex; align-items:center; gap:11px; }
-    .logo-sq { width:34px; height:34px; background:var(--orange); border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:900; color:#fff; }
-    .logo-n { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--text); }
-    .logo-n em { color:var(--orange); font-style:normal; }
-    .hdr-tag { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); border-left:1px solid var(--border); padding-left:20px; margin-left:20px; }
-    .hdr-r { margin-left:auto; display:flex; align-items:center; gap:16px; }
-    .hdr-clock { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:700; color:var(--text); letter-spacing:2px; }
-    .live-badge { display:flex; align-items:center; gap:6px; padding:5px 13px; border-radius:20px; background:var(--olive-l); border:1px solid var(--olive-m); font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; color:var(--olive); }
-    .ldot { width:7px; height:7px; border-radius:50%; background:var(--olive); animation:lp 2s infinite; }
-    @keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(74,122,32,.4);}60%{box-shadow:0 0 0 6px rgba(74,122,32,0);}}
+    .main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
 
-    /* ── MAIN SPLIT ── */
-    .main { flex:1; display:grid; grid-template-columns:1fr 1fr; overflow:hidden; }
+    /* Now Serving (left) */
+    .ns { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 48px; border-right: 1px solid var(--border); position: relative; background: linear-gradient(160deg, #fff 60%, #F6FBF0 100%); }
+    .ns::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--olive), transparent); }
+    .ns-eyebrow { font-family: var(--f-head); font-size: 13px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; color: var(--olive); margin-bottom: 22px; display: flex; align-items: center; gap: 14px; width: 100%; justify-content: center; }
+    .ns-eyebrow::before, .ns-eyebrow::after { content: ''; flex: 1; height: 1px; background: var(--olive-m); }
+    #ns-name { font-family: var(--f-head); font-size: clamp(44px, 7vw, 92px); font-weight: 900; text-align: center; line-height: 1; text-transform: uppercase; letter-spacing: 1px; word-break: break-word; }
+    #ns-name.pop { animation: pop .4s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: none; } }
+    .ns-ready-tag { margin-top: 24px; display: inline-flex; align-items: center; gap: 8px; background: var(--olive); color: #fff; padding: 10px 28px; border-radius: 5px; font-family: var(--f-head); font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
+    .ns-empty { text-align: center; }
+    .ns-empty .eicon { font-size: 52px; opacity: .2; margin-bottom: 20px; }
+    .ns-empty h2 { font-family: var(--f-head); font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+    .ns-empty p { color: var(--muted2); margin-top: 8px; font-size: 15px; }
 
-    /* ── NOW SERVING (left) ── */
-    .ns {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:40px 48px; border-right:1px solid var(--border); position:relative;
-      background:linear-gradient(160deg, #fff 60%, #F6FBF0 100%);
-    }
-    .ns::before {
-      content:''; position:absolute; top:0; left:0; right:0; height:3px;
-      background:linear-gradient(90deg, transparent, var(--olive), transparent);
-    }
-    .ns-eyebrow {
-      font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700;
-      letter-spacing:5px; text-transform:uppercase; color:var(--olive); margin-bottom:22px;
-      display:flex; align-items:center; gap:14px; width:100%; justify-content:center;
-    }
-    .ns-eyebrow::before,.ns-eyebrow::after { content:''; flex:1; height:1px; background:var(--olive-m); }
-    #ns-name {
-      font-family:'Barlow Condensed',sans-serif;
-      font-size:clamp(44px,7vw,92px); font-weight:900; color:var(--text);
-      text-align:center; line-height:1; text-transform:uppercase; letter-spacing:1px; word-break:break-word;
-    }
-    #ns-name.pop { animation:pop .4s ease-out; }
-    @keyframes pop{from{opacity:0;transform:scale(.96)translateY(8px);}to{opacity:1;transform:none;}}
-    #ns-meta { display:flex; gap:14px; margin-top:20px; flex-wrap:wrap; justify-content:center; }
-    .ns-pill { padding:7px 20px; border-radius:5px; font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:1px; }
-    .np-inv  { background:var(--olive-l); color:var(--olive); border:1px solid var(--olive-m); }
-    .np-box  { background:var(--orange-l); color:var(--orange); border:1px solid var(--orange-m); }
-    .ns-ready-tag {
-      margin-top:24px; display:inline-flex; align-items:center; gap:8px;
-      background:var(--olive); color:#fff; padding:10px 28px; border-radius:5px;
-      font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
-    }
-    .ns-empty { text-align:center; }
-    .ns-empty .eicon { font-size:52px; opacity:.2; margin-bottom:20px; }
-    .ns-empty h2 { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--muted); }
-    .ns-empty p { color:var(--muted2); margin-top:8px; font-size:15px; }
+    /* Queue (right) */
+    .qpanel { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
+    .qhdr { display: flex; align-items: center; gap: 12px; padding: 14px 28px; flex-shrink: 0; background: #fff; border-bottom: 1px solid var(--border); }
+    .qlabel { font-family: var(--f-head); font-size: 16px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .qbadge { background: var(--orange-l); color: var(--orange); border: 1px solid var(--orange-m); border-radius: 20px; padding: 3px 12px; font-family: var(--f-head); font-size: 17px; font-weight: 800; }
+    .q-sum { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 500; }
+    .qscroll { flex: 1; overflow-y: auto; }
+    .sec-hdr { padding: 7px 28px; font-family: var(--f-head); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .qitem { display: flex; align-items: center; gap: 14px; padding: 14px 28px; border-bottom: 1px solid var(--border); background: #fff; }
+    .qpos { font-family: var(--f-head); font-size: 26px; font-weight: 900; color: var(--muted2); min-width: 36px; }
+    .qinfo { flex: 1; }
+    .qname { font-family: var(--f-head); font-size: 30px; font-weight: 800; line-height: 1; }
+    .qsub { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+    .qeta { font-family: var(--f-head); font-size: 14px; font-weight: 700; color: var(--olive); }
+    .qempty { text-align: center; padding: 48px 28px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
-    /* ── QUEUE (right) ── */
-    .qpanel { display:flex; flex-direction:column; overflow:hidden; background:var(--surface); }
-    .qhdr { display:flex; align-items:center; gap:12px; padding:14px 28px; flex-shrink:0; background:#fff; border-bottom:1px solid var(--border); box-shadow:0 1px 0 var(--border); }
-    .qlabel { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
-    .qbadge { background:var(--orange-l); color:var(--orange); border:1px solid var(--orange-m); border-radius:20px; padding:3px 12px; font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:800; }
-    .q-sum { margin-left:auto; font-size:12px; color:var(--muted); font-weight:500; }
-
-    .qscroll { flex:1; overflow-y:auto; }
-    .qscroll::-webkit-scrollbar { width:3px; }
-    .qscroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
-
-    .sec-hdr { padding:7px 28px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:1px solid var(--border); }
-    .qitem { display:flex; align-items:center; gap:14px; padding:14px 28px; border-bottom:1px solid var(--border); background:#fff; transition:background .15s; }
-    .qitem:hover { background:var(--surface); }
-    .qitem.dimmed { opacity:.55; }
-    .qpos { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900; color:var(--muted2); min-width:36px; }
-    .qinfo { flex:1; }
-    .qname { font-family:'Barlow Condensed',sans-serif; font-size:30px; font-weight:800; color:var(--text); line-height:1; }
-    .qsub { display:flex; gap:10px; align-items:center; margin-top:4px; }
-    .qinv { font-size:12px; color:var(--muted); font-family:monospace; }
-    .qboxes { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; color:var(--orange); }
-    .qstag { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:.5px; padding:2px 9px; border-radius:3px; text-transform:uppercase; }
-    .qt-proc { background:var(--amber-l);  color:var(--amber); border:1px solid #F5D98A; }
-    .qt-np   { background:var(--red-l);    color:var(--red);   border:1px solid #F5C0BA; }
-    .qt-dn   { background:var(--gray-l);   color:var(--gray);  border:1px solid var(--border2); }
-    .qempty { text-align:center; padding:48px 28px; color:var(--muted); font-size:14px; line-height:1.6; }
-
-    /* ── BOTTOM ── */
-    .btm { height:34px; flex-shrink:0; padding:0 32px; background:var(--surface); border-top:1px solid var(--border); display:flex; align-items:center; font-size:11px; color:var(--muted); }
-    .btm-r { margin-left:auto; display:flex; align-items:center; gap:10px; }
-    #last-upd { color:var(--muted); }
-    #cdown { color:var(--orange); font-weight:600; }
-    .sl { color:var(--muted); text-decoration:none; }
-    .sl:hover { color:var(--orange); }
-
-    /* ── OVERLAY ── */
-    .ov { position:fixed; inset:0; background:rgba(255,255,255,.92); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100; }
-    .ovb { background:#fff; border:1px solid var(--border); border-radius:12px; padding:48px; max-width:500px; text-align:center; box-shadow:0 8px 40px rgba(0,0,0,.12); }
-    .ov-icon { width:52px; height:52px; background:var(--orange); border-radius:9px; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; color:#fff; margin:0 auto 18px; }
-    .ovb h1 { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; color:var(--text); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
-    .ovb p { color:var(--muted); font-size:13px; line-height:1.7; margin-bottom:22px; }
-    .ov-in { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 14px; color:var(--text); font-family:monospace; font-size:12px; outline:none; margin-bottom:12px; }
-    .ov-in:focus { border-color:var(--orange); }
-    .ov-btn { width:100%; background:var(--orange); color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800; letter-spacing:2px; text-transform:uppercase; padding:13px; border:none; border-radius:6px; cursor:pointer; }
-    .ov-btn:hover { filter:brightness(1.05); }
-    .ov-err { margin-top:10px; font-size:12px; color:var(--red); min-height:16px; }
-  </style>
-  <style>
     @media (max-width: 900px) {
-      .main { grid-template-columns: 1fr; }
-      .ns { padding: 20px 24px; }
-      .qitem { padding: 12px 18px; }
-      .hdr { padding: 0 16px; }
-      .hdr-clock { font-size: 26px; }
-      .logo-n { font-size:18px; }
-    }
-    @media (max-width: 480px) {
-      html { font-size: 14px; }
-      .ns-eyebrow { font-size: 12px; }
-      .ns-ready-tag { font-size: 16px; padding:8px 18px; }
-      .qname { font-size: 22px; }
+      .main { grid-template-columns: 1fr; overflow-y: auto; }
+      .ns { border-right: none; border-bottom: 1px solid var(--border); padding: 24px; max-height: 45vh; }
+      .qname { font-size: 24px; }
     }
   </style>
 </head>
 <body>
-
-<div class="ov" id="ov" style="display:none">
-  <div class="ovb">
-    <div class="ov-icon">OM</div>
-    <h1>Customer Pickup</h1>
-    <p>Enter your Google Sheet CSV URL to show the live pickup queue.</p>
-    <input class="ov-in" id="ov-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv">
-    <button class="ov-btn" onclick="connectOv()">Connect Display</button>
-    <div class="ov-err" id="ov-err"></div>
-  </div>
-</div>
-
-<div class="hdr">
-  <div class="logo-w">
-    <div class="logo-sq">OM</div>
-    <div class="logo-n"><em>OM</em> Produce</div>
-  </div>
-  <div class="hdr-tag">🛒 Customer Pickup</div>
-  <div class="hdr-r">
-    <div class="live-badge"><div class="ldot"></div><span id="ltxt">Live</span></div>
-    <div class="hdr-clock" id="clk">--:--</div>
-  </div>
-</div>
-
-<div class="main">
-  <div class="ns">
-    <div class="ns-eyebrow">Now Serving</div>
-    <div id="ns-content">
-      <div class="ns-empty"><div class="eicon">⏳</div><h2>Loading…</h2></div>
+  <div class="ov" id="ov" style="display:none">
+    <div class="ovb">
+      <div class="ov-icon">OM</div>
+      <h1>Customer Pickup</h1>
+      <p>Not configured yet. Open <strong>Settings</strong> to connect the data source.</p>
+      <a class="ov-btn" href="index.html" style="display:block;text-decoration:none">Open Settings</a>
     </div>
   </div>
 
-  <div class="qpanel">
-    <div class="qhdr">
-      <div class="qlabel">Next Up</div>
-      <div class="qbadge" id="qcnt">0</div>
-      <div class="q-sum" id="q-sum"></div>
+  <div class="topbar">
+    <div class="logo-wrap">
+      <div class="logo-sq">OM</div>
+      <div class="logo-name"><em>OM</em> Produce</div>
     </div>
-    <div class="qscroll" id="qlist"></div>
+    <div class="screen-tag">🛒 Customer Pickup</div>
+    <div class="tb-right">
+      <div class="live-pill" id="lpill"><div class="ldot"></div><span id="ltxt">LIVE</span></div>
+      <div class="clock" id="clk">--:--</div>
+    </div>
   </div>
-</div>
 
-<div class="btm">
-  <span>OM Produce Display System</span>
-  <div class="btm-r">
-    <span id="last-upd">—</span>
-    <span id="cdown"></span>
-    <a class="sl" href="index.html">⚙ Settings</a>
+  <div class="main">
+    <div class="ns">
+      <div class="ns-eyebrow">Now Ready</div>
+      <div id="ns-content"><div class="ns-empty"><div class="eicon">⏳</div><h2>Loading…</h2></div></div>
+    </div>
+    <div class="qpanel">
+      <div class="qhdr">
+        <div class="qlabel">In Progress</div>
+        <div class="qbadge" id="qcnt">0</div>
+        <div class="q-sum" id="q-sum"></div>
+      </div>
+      <div class="qscroll scroll" id="qlist"></div>
+    </div>
   </div>
-</div>
 
-<script>
-const KEY='om_produce_sheet_url';
-const DEFAULT='https://docs.google.com/spreadsheets/d/e/2PACX-1vQHnlcNDAql97kEYtWkiV6ofkHMsxMNxJ9-b_sgCVX7sFhBrVRHHCb0Xt4ELJbrUM69kuD-FMRnbLVm/pub?output=csv';
-const REFRESH=30;
-let tmr=null,cd=REFRESH,prevName='';
+  <div class="btm">
+    <span class="demo-tag" id="demo" style="display:none">DEMO DATA</span>
+    <span>OM Produce Display System</span>
+    <div class="btm-r">
+      <span id="last-upd">—</span>
+      <span id="cdown"></span>
+      <a href="index.html">⚙ Settings</a>
+    </div>
+  </div>
 
-function pad(n){return String(n).padStart(2,'0');}
-function tick(){document.getElementById('clk').textContent=`${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;}
-setInterval(tick,1000);tick();
-
-function fixURL(raw){const u=(raw||'').trim();if(!u)return'';if(u.includes('output=csv'))return u;const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);if(m){const g=(u.match(/[#&?]gid=(\d+)/)||[])[1]||'0';return`https://docs.google.com/spreadsheets/d/${m[1]}/pub?gid=${g}&single=true&output=csv`;}return u;}
-function isHTML(t){const s=t.trim();return s.startsWith('<!')||s.startsWith('<html');}
-function parseCSV(txt){
-  const lines=txt.split('\n');
-  function sr(l){const v=[];let c='',q=0;for(const ch of l){if(ch==='"'){q=1-q;}else if(ch===','&&!q){v.push(c.replace(/^"|"$/g,'').trim());c='';}else c+=ch;}v.push(c.replace(/^"|"$/g,'').trim());return v;}
-  let hi=0;for(let i=0;i<Math.min(5,lines.length);i++){if(sr(lines[i]).some(v=>v&&!/^\d+$/.test(v))){hi=i;break;}}
-  const hdrs=sr(lines[hi]).map(h=>h.replace(/"/g,'').trim());
-  const rows=[];
-  for(let i=hi+1;i<lines.length;i++){if(!lines[i].trim())continue;const vs=sr(lines[i]);if(vs.every(v=>!v))continue;const row={};hdrs.forEach((h,j)=>row[h]=(vs[j]||'').trim());rows.push(row);}
-  return{hdrs,rows};
-}
-function fc(hdrs,...ks){for(const k of ks){const f=hdrs.find(h=>h.toLowerCase().includes(k.toLowerCase()));if(f)return f;}return null;}
-function ns(v){if(!v)return'np';const s=v.toLowerCase();if(s.includes('not')||s.includes('unpull'))return'np';if(s.includes('process')||s.includes('pull'))return'proc';if(s.includes('ready'))return'rd';if(s.includes('done')||s.includes('pick')||s.includes('collect')||s.includes('complete'))return'dn';return'np';}
-
-function renderServing(o){
-  const el = document.getElementById('ns-content');
-  el.innerHTML = '';
-  if (!o) {
-    const empty = document.createElement('div');
-    empty.className = 'ns-empty';
-    const ico = document.createElement('div'); ico.className = 'eicon'; ico.textContent = '⏰';
-    const h2 = document.createElement('h2'); h2.textContent = 'No Orders Ready';
-    const p = document.createElement('p'); p.textContent = 'Orders appear here when marked Ready';
-    empty.appendChild(ico); empty.appendChild(h2); empty.appendChild(p);
-    el.appendChild(empty);
-    prevName = '';
-    return;
-  }
-  const changed = prevName !== o.name;
-  prevName = o.name;
-  const nameEl = document.createElement('div');
-  nameEl.id = 'ns-name';
-  if (changed) nameEl.classList.add('pop');
-  nameEl.textContent = (o.name || '').toUpperCase();
-
-  const meta = document.createElement('div'); meta.id = 'ns-meta';
-  if (o.inv) {
-    const inv = document.createElement('div'); inv.className = 'ns-pill np-inv'; inv.textContent = o.inv; meta.appendChild(inv);
-  }
-  if (o.boxes) {
-    const bx = document.createElement('div'); bx.className = 'ns-pill np-box'; bx.textContent = `📦 ${o.boxes} Boxes`; meta.appendChild(bx);
-  }
-
-  const tag = document.createElement('div'); tag.className = 'ns-ready-tag'; tag.textContent = '✓ Ready for Pickup';
-  el.appendChild(nameEl); el.appendChild(meta); el.appendChild(tag);
-}
-
-function createQItem(o, pos, tclass, tlabel, dimmed = false){
-  const item = document.createElement('div'); item.className = 'qitem' + (dimmed ? ' dimmed' : '');
-  const qpos = document.createElement('div'); qpos.className = 'qpos'; qpos.textContent = pos || '—';
-  const qinfo = document.createElement('div'); qinfo.className = 'qinfo';
-  const qname = document.createElement('div'); qname.className = 'qname'; qname.textContent = o.name || '';
-  const qsub = document.createElement('div'); qsub.className = 'qsub';
-  if (o.inv) { const inv = document.createElement('span'); inv.className = 'qinv'; inv.textContent = o.inv; qsub.appendChild(inv); }
-  if (o.boxes) { const bx = document.createElement('span'); bx.className = 'qboxes'; bx.textContent = `📦 ${o.boxes}`; qsub.appendChild(bx); }
-  if (tclass) { const stag = document.createElement('span'); stag.className = 'qstag ' + tclass; stag.textContent = tlabel; qsub.appendChild(stag); }
-  qinfo.appendChild(qname); qinfo.appendChild(qsub);
-  item.appendChild(qpos); item.appendChild(qinfo);
-  return item;
-}
-
-function renderQueue(all){
-  const ready = all.filter((o) => o.status === 'rd');
-  const proc = all.filter((o) => o.status === 'proc');
-  const np = all.filter((o) => o.status === 'np');
-  const done = all.filter((o) => o.status === 'dn');
-  document.getElementById('qcnt').textContent = ready.length + proc.length + np.length;
-  document.getElementById('q-sum').textContent = `${ready.length} of ${all.length} ready`;
-
-  const container = document.getElementById('qlist');
-  container.innerHTML = '';
-
-  if (ready.length > 1) {
-    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Ready — Waiting'; container.appendChild(hdr);
-    ready.slice(1).forEach((o, i) => container.appendChild(createQItem(o, i + 2)));
-  }
-  if (proc.length) {
-    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Being Processed'; container.appendChild(hdr);
-    proc.forEach((o) => container.appendChild(createQItem(o, null, 'qt-proc', 'Processing')));
-  }
-  if (np.length) {
-    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Not Pulled Yet'; container.appendChild(hdr);
-    np.forEach((o) => container.appendChild(createQItem(o, null, 'qt-np', 'Not Pulled')));
-  }
-  if (done.length) {
-    const hdr = document.createElement('div'); hdr.className = 'sec-hdr'; hdr.textContent = 'Picked Up — Done'; container.appendChild(hdr);
-    done.forEach((o) => container.appendChild(createQItem(o, null, 'qt-dn', 'Done', true)));
-  }
-  if (!container.childElementCount) {
-    const empty = document.createElement('div'); empty.className = 'qempty'; empty.innerHTML = 'No orders in queue.<br>Add orders to your Google Sheet to begin.'; container.appendChild(empty);
-  }
-}
-
-function startCD(){cd=REFRESH;clearInterval(tmr);tmr=setInterval(()=>{cd--;document.getElementById('cdown').textContent=`· ${cd}s`;if(cd<=0){loadData();cd=REFRESH;}},1000);}
-
-async function loadData(){
-  const url=fixURL(localStorage.getItem(KEY)||DEFAULT);
-  if(!url){document.getElementById('ov').style.display='flex';return;}
-  document.getElementById('ltxt').textContent='Updating…';
-  try{
-    const res=await fetch(url+'&_='+Date.now());
-    if(!res.ok)throw new Error('HTTP');
-    const txt=await res.text();
-    if(isHTML(txt))throw new Error('WRONG_URL');
-    const{hdrs,rows}=parseCSV(txt);
-    const cNm=fc(hdrs,'customer name','name','customer','cust');
-    const cIn=fc(hdrs,'invoice','inv');
-    const cBx=fc(hdrs,'box','qty','quantity','pcs');
-    const cSt=fc(hdrs,'status','order status');
-    const orders=rows.filter(r=>cNm?r[cNm]:Object.values(r).some(v=>v)).filter(r=>!cNm||r[cNm]).map(r=>({name:(cNm?r[cNm]:''),inv:cIn?r[cIn]:'',boxes:cBx?r[cBx]:'',status:ns(cSt?r[cSt]:'')}));
-    const so={rd:0,proc:1,np:2,dn:3};
-    orders.sort((a,b)=>so[a.status]-so[b.status]);
-    renderServing(orders.find(o=>o.status==='rd')||null);
-    renderQueue(orders);
-    document.getElementById('last-upd').textContent=`Updated ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-    document.getElementById('ltxt').textContent='Live';
-    startCD();
-  }catch(e){
-    document.getElementById('ltxt').textContent='Error';
-    document.getElementById('last-upd').textContent=e.message==='WRONG_URL'?'Wrong URL — check Settings':'Load failed — retrying…';
-    if(e.message!=='WRONG_URL')setTimeout(loadData,15000);
-  }
-}
-
-async function connectOv(){
-  const url=fixURL(document.getElementById('ov-url').value.trim())||DEFAULT;
-  const err=document.getElementById('ov-err');err.textContent='Testing…';
-  try{const r=await fetch(url);if(!r.ok)throw new Error('HTTP');const t=await r.text();if(isHTML(t))throw new Error('HTML');localStorage.setItem(KEY,url);document.getElementById('ov').style.display='none';loadData();}
-  catch(e){err.textContent=e.message==='HTML'?'Edit link detected — use File → Publish to web → CSV.':'Cannot connect. Check URL.';}
-}
-
-if(!localStorage.getItem(KEY))localStorage.setItem(KEY,DEFAULT);
-loadData();
-</script>
+  <script src="assets/config.js"></script>
+  <script src="assets/sample.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/pickup.js"></script>
 </body>
 </html>
