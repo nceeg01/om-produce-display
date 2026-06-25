@@ -172,7 +172,7 @@
       <ol class="steps">
         <li>In the Google Sheet, name the working tab <strong>ORDERS</strong> with the headers above. Add <strong>data-validation dropdowns</strong> on <code>Status</code> and <code>WaitMin</code>.</li>
         <li>Open <strong>Extensions → Apps Script</strong>, paste <code>apps-script/Code.gs</code> from the repo, and <strong>Save</strong>.</li>
-        <li>Run the <code>ensureV2</code> function once (adds columns <code>Q/R/S</code> + the <code>LOG</code> tab). Authorize when prompted.</li>
+        <li>Run the <code>ensureV2</code> function once (adds columns <code>Q–T</code> incl. <code>PickupAt</code> + the <code>LOG</code> tab). Authorize when prompted.</li>
         <li>In <strong>Project Settings → Script Properties</strong>, add <code>API_TOKEN</code> = a long random string.</li>
         <li>Add an <strong>installable “On edit” trigger</strong> for <code>onEditTrigger</code> (backs up manual sheet edits).</li>
         <li><strong>Deploy → New deployment → Web app</strong>: execute as <strong>Me</strong> (an editor account), access “Anyone with the link”. Copy the <code>/exec</code> URL. <em>(After editing the script later, use Manage deployments → New version so the URL stays the same.)</em></li>
@@ -183,6 +183,7 @@
     </div>
   </div>
 
+  <script src="assets/env.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/sample.js"></script>
   <script src="assets/api.js"></script>

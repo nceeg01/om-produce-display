@@ -1,0 +1,12 @@
+# Playwright MCP scratch output (browser snapshots / console logs)
+.playwright-mcp/
+
+# Dependencies / tooling (this is a build-free static site — none should appear)
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
