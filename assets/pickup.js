@@ -1,12 +1,19 @@
 /* ============================================================
-   OM Produce — Customer Pickup view render (name only, no boxes)
+   OM Produce — Customer Pickup TV (name only, no boxes)
+   • "Now Ready" hero (the next person to collect)
+   • Rotating queue: 5–7 customers per page, auto-advancing every few
+     seconds, each line showing its own ETA. (issues #5, #7)
    ============================================================ */
 (function () {
   'use strict';
   var cfg = getConfig();
-  OM.startClock(document.getElementById('clk'), null);
+  var PAGE_SIZE = cfg.tvPageSize || 6;       // customers per page (5–7)
+  var ROTATE_SEC = cfg.tvRotateSec || 5;     // seconds before the next page
+
+  OM.startClock(document.getElementById('clk'), document.getElementById('dln'), 'dmy'); // hh:mm + dd/mm/yy
 
   var lastOrders = [], prevName = '';
+  var page = 0, queueIds = '', secTick = 0;
 
   function setLive(state, txt) {
     document.getElementById('lpill').className = 'live-pill' + (state ? ' ' + state : '');
@@ -16,6 +23,13 @@
 
   // "ready" + "invoiced" are both collectable from the customer's POV.
   function isReady(o) { return o.status === 'ready' || o.status === 'invoiced'; }
+
+  // Per-line status/ETA shown on the same row as the customer.
+  function lineInfo(o) {
+    if (isReady(o)) return { cls: 'ready', txt: 'Ready ✓' };
+    if (o.status === 'pulling') { var e = OM.fmtEta(o); return { cls: 'pulling', txt: e ? 'Ready in ' + e : 'Being prepared' }; }
+    return { cls: 'received', txt: 'In queue' };
+  }
 
   function renderServing(o) {
     var box = document.getElementById('ns-content');
@@ -38,21 +52,27 @@
     box.appendChild(el('div', 'ns-ready-tag', '✓ Ready for Pickup'));
   }
 
-  function qitem(o, pos, showEta) {
+  function qitem(o, pos) {
     var it = el('div', 'qitem');
-    it.appendChild(el('div', 'qpos', pos != null ? String(pos) : '•'));
+    it.appendChild(el('div', 'qpos', String(pos)));
     var info = el('div', 'qinfo');
     info.appendChild(el('div', 'qname', o.customer || ''));
-    var sub = el('div', 'qsub');
-    if (showEta) {
-      var eta = OM.fmtEta(o);
-      sub.appendChild(el('span', 'qeta', isReady(o) ? 'Ready ✓' : (eta ? 'Ready in ' + eta : 'Being prepared')));
-    } else {
-      sub.appendChild(el('span', 'qeta', 'In queue'));
-    }
-    info.appendChild(sub);
     it.appendChild(info);
+    var li = lineInfo(o);
+    it.appendChild(el('div', 'qeta ' + li.cls, li.txt));   // est on the same customer line
     return it;
+  }
+
+  // Page indicator (dots + "8–13 of 19") in the queue header.
+  function renderPageInd(total, pages, startI, count) {
+    var host = document.getElementById('qpage');
+    host.innerHTML = '';
+    if (pages <= 1) return;
+    var lbl = el('span', 'pglbl', (startI + 1) + '–' + (startI + count) + ' of ' + total);
+    var dots = el('div', 'qdots');
+    for (var i = 0; i < pages; i++) dots.appendChild(el('div', 'qdot' + (i === page ? ' on' : '')));
+    host.appendChild(lbl);
+    host.appendChild(dots);
   }
 
   function render(orders) {
@@ -65,27 +85,28 @@
     renderPrep(orders);
     renderServing(ready[0] || null);
 
-    document.getElementById('qcnt').textContent = ready.length + pulling.length + received.length;
-    document.getElementById('q-sum').textContent = ready.length + ' ready';
+    // The rotating queue = everyone still in progress (the hero is shown separately).
+    var queue = ready.slice(1).concat(pulling, received);
+    document.getElementById('qcnt').textContent = queue.length;
+
+    // Reset rotation when the set of customers changes (don't strand on a stale page).
+    var ids = queue.map(function (o) { return o.id || o.customer; }).join('|');
+    if (ids !== queueIds) { queueIds = ids; page = 0; secTick = 0; }
+
+    var pages = Math.max(1, Math.ceil(queue.length / PAGE_SIZE));
+    if (page >= pages) page = 0;
+    var startI = page * PAGE_SIZE;
+    var slice = queue.slice(startI, startI + PAGE_SIZE);
 
     var list = document.getElementById('qlist');
     list.innerHTML = '';
-
-    if (ready.length > 1) {
-      list.appendChild(el('div', 'sec-hdr', 'Ready — Please Collect'));
-      ready.slice(1).forEach(function (o, i) { list.appendChild(qitem(o, i + 2, true)); });
-    }
-    if (pulling.length) {
-      list.appendChild(el('div', 'sec-hdr', 'Being Prepared'));
-      pulling.forEach(function (o) { list.appendChild(qitem(o, null, true)); });
-    }
-    if (received.length) {
-      list.appendChild(el('div', 'sec-hdr', 'In Queue'));
-      received.forEach(function (o) { list.appendChild(qitem(o, null, false)); });
-    }
-    if (!list.childElementCount) {
+    if (!slice.length) {
       list.appendChild(el('div', 'qempty', 'No orders in queue right now.'));
+      renderPageInd(0, 1, 0, 0);
+      return;
     }
+    slice.forEach(function (o, i) { list.appendChild(qitem(o, startI + i + 1)); });
+    renderPageInd(queue.length, pages, startI, slice.length);
   }
 
   // "Now Preparing" banner — names the warehouse flagged (≤3), public-safe.
@@ -103,8 +124,13 @@
     });
   }
 
-  // Refresh once a second to advance the ETA countdowns.
-  setInterval(function () { if (lastOrders.length) render(lastOrders); }, 1000);
+  // Once a second: advance ETA countdowns, and rotate to the next page every ROTATE_SEC.
+  setInterval(function () {
+    if (!lastOrders.length) return;
+    secTick++;
+    if (secTick >= ROTATE_SEC) { secTick = 0; page++; }   // render() wraps page within range
+    render(lastOrders);
+  }, 1000);
 
   OM.startPolling({
     view: 'customer',
