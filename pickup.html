@@ -33,7 +33,11 @@
     .qhdr { display: flex; align-items: center; gap: 12px; padding: 14px 28px; flex-shrink: 0; background: #fff; border-bottom: 1px solid var(--border); }
     .qlabel { font-family: var(--f-head); font-size: 16px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
     .qbadge { background: var(--orange-l); color: var(--orange); border: 1px solid var(--orange-m); border-radius: 20px; padding: 3px 12px; font-family: var(--f-head); font-size: 17px; font-weight: 800; }
-    .q-sum { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 500; }
+    .qpage { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .qpage .pglbl { font-family: var(--f-head); font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .5px; white-space: nowrap; }
+    .qdots { display: flex; gap: 6px; }
+    .qdot { width: 9px; height: 9px; border-radius: 50%; background: var(--border2); transition: background .3s, transform .3s; }
+    .qdot.on { background: var(--orange); transform: scale(1.25); }
     .qscroll { flex: 1; overflow-y: auto; }
     .sec-hdr { padding: 7px 28px; font-family: var(--f-head); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
     .qitem { display: flex; align-items: center; gap: 14px; padding: 14px 28px; border-bottom: 1px solid var(--border); background: #fff; }
@@ -41,7 +45,10 @@
     .qinfo { flex: 1; }
     .qname { font-family: var(--f-head); font-size: 30px; font-weight: 800; line-height: 1; }
     .qsub { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
-    .qeta { font-family: var(--f-head); font-size: 14px; font-weight: 700; color: var(--olive); }
+    .qeta { margin-left: auto; flex-shrink: 0; font-family: var(--f-head); font-size: 17px; font-weight: 800; letter-spacing: .3px; }
+    .qeta.ready    { color: var(--olive); }
+    .qeta.pulling  { color: var(--amber); }
+    .qeta.received { color: var(--muted); font-weight: 700; }
     .qempty { text-align: center; padding: 48px 28px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
     @media (max-width: 900px) {
@@ -69,7 +76,7 @@
     <div class="screen-tag">🛒 Customer Pickup</div>
     <div class="tb-right">
       <div class="live-pill" id="lpill"><div class="ldot"></div><span id="ltxt">LIVE</span></div>
-      <div class="clock big" id="clk">--:--</div>
+      <div class="clock-wrap"><div class="clock big" id="clk">--:--</div><div class="dateline" id="dln">—</div></div>
     </div>
   </div>
 
@@ -87,7 +94,7 @@
       <div class="qhdr">
         <div class="qlabel">In Progress</div>
         <div class="qbadge" id="qcnt">0</div>
-        <div class="q-sum" id="q-sum"></div>
+        <div class="qpage" id="qpage"></div>
       </div>
       <div class="qscroll scroll" id="qlist"></div>
     </div>
@@ -103,6 +110,7 @@
     </div>
   </div>
 
+  <script src="assets/env.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/sample.js"></script>
   <script src="assets/api.js"></script>

@@ -1,14 +1,16 @@
 /* ============================================================
    OM Produce — Warehouse iPad control (tap to update)
-   Optimistic UI + debounced steppers + server snapshot reconcile.
+   Columns: Order# · Customer · Boxes(±) · Start · End · Pickup · Est(±5)
+   Status is derived from the milestone times:
+     set Start → Pulling, set End → Ready, set Pickup → Done (collected).
+   Optimistic UI + debounced numeric writes + server snapshot reconcile.
    ============================================================ */
 (function () {
   'use strict';
   var cfg = getConfig();
   var orders = [];
   var poller = null;
-  var STAGES = ['received', 'pulling', 'ready', 'invoiced', 'done'];
-  var WAITS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
+  var EST_MIN = 0, EST_MAX = 60, EST_STEP = 5;   // 5-minute estimate increments
 
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
   OMUI.pinGate(start);
@@ -18,7 +20,6 @@
     document.getElementById('ltxt').textContent = txt;
   }
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
-  function byId(id) { return orders.filter(function (o) { return o.id === id; })[0]; }
 
   // Pending debounced numeric writes per (orderId+field)
   var debTimers = {};
@@ -50,73 +51,86 @@
     board.innerHTML = '';
     if (!sorted.length) {
       var em = el('div', 'empty'); em.appendChild(el('div', 'ei', '📋')); em.appendChild(el('h3', null, 'No active orders'));
-      em.style.gridColumn = '1 / -1'; board.appendChild(em); return;
+      board.appendChild(em); return;
     }
     sorted.forEach(function (o) { board.appendChild(card(o)); });
   }
 
+  function statusPill(key) { var m = OM.STATUS[key] || OM.STATUS.received; return el('span', 'pill ' + m.cls, m.label); }
+
   function card(o) {
     var c = el('div', 'ctl-card ' + o.status + (o.nowPulling ? ' pull-on' : ''));
 
-    var top = el('div', 'cc-top');
-    var nmWrap = el('div'); nmWrap.style.flex = '1';
-    nmWrap.appendChild(el('div', 'cc-name', o.customer || '—'));
-    if (o.id) nmWrap.appendChild(el('div', 'cc-oid', o.id));
-    if (o.checkedInAt) nmWrap.appendChild(el('div', 'cc-arr', '✓ here ' + OM.fmtTime(o.checkedInAt)));
-    top.appendChild(nmWrap);
-    var star = el('div', 'star' + (o.nowPulling ? ' on' : ''), '⭐');
-    star.title = 'Mark as being pulled now';
-    star.addEventListener('click', function () {
-      var turningOn = !o.nowPulling;
-      write('togglePull', { orderId: o.id, on: turningOn }, function () { o.nowPulling = turningOn; if (turningOn) o.status = 'pulling'; });
-    });
-    top.appendChild(star);
-    c.appendChild(top);
-
+    // ── identity: customer, order#, derived status, arrival, live pull timer ──
+    var idc = el('div', 'cc-id');
+    idc.appendChild(el('div', 'cc-name', o.customer || '—'));
+    var meta = el('div', 'cc-meta');
+    if (o.id) meta.appendChild(el('span', 'cc-oid', o.id));
+    meta.appendChild(statusPill(o.status));
+    if (o.checkedInAt) meta.appendChild(el('span', 'cc-arr', '✓ here ' + OM.fmtTime(o.checkedInAt)));
+    if (o.status === 'pulling' && o.t.pulling) {
+      var stale = OM.pullElapsedMs(o) > cfg.stalePullMin * 60000;
+      meta.appendChild(el('span', 'cc-elapsed' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o))));
+    }
+    idc.appendChild(meta);
     if (o.addons.length) {
       var ad = el('div', 'addons');
       o.addons.forEach(function (a) { ad.appendChild(el('span', 'addon', a)); });
-      c.appendChild(ad);
+      idc.appendChild(ad);
     }
+    c.appendChild(idc);
 
-    // Boxes stepper
-    var bxRow = el('div', 'rowline');
-    bxRow.appendChild(el('div', 'rl-lbl', 'Boxes'));
-    bxRow.appendChild(stepper(o.boxes, 'box', function (next) {
-      o.boxes = next; debounce(o.id + 'box', function () { write('setBoxes', { orderId: o.id, boxes: o.boxes }); });
-    }, 0, 999, 1));
-    if (o.status === 'pulling' && o.t.pulling) {
-      var stale = OM.pullElapsedMs(o) > cfg.stalePullMin * 60000;
-      bxRow.appendChild(el('div', 'pulltimer' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o))));
-    }
-    c.appendChild(bxRow);
-
-    // Wait chip (cycles in 5s)
-    var wRow = el('div', 'rowline');
-    wRow.appendChild(el('div', 'rl-lbl', 'Wait'));
-    var wc = el('button', 'waitchip', o.waitMin ? o.waitMin + ' min' : 'No wait');
-    wc.addEventListener('click', function () {
-      var i = WAITS.indexOf(o.waitMin); var next = WAITS[(i + 1) % WAITS.length];
-      o.waitMin = next; wc.textContent = next ? next + ' min' : 'No wait';
-      debounce(o.id + 'wait', function () { write('setWait', { orderId: o.id, waitMin: o.waitMin }); }, 600);
-    });
-    wRow.appendChild(wc);
-    var eta = OM.fmtEta(o);
-    if (eta && o.status !== 'ready' && o.status !== 'invoiced') { var e = el('div', 'pulltimer', eta); e.style.color = 'var(--olive)'; wRow.appendChild(e); }
-    c.appendChild(wRow);
-
-    // Status buttons
-    var sr = el('div', 'statusrow');
-    STAGES.forEach(function (st) {
-      var b = el('button', 'sbtn ' + st + (o.status === st ? ' on' : ''), OM.STATUS[st].label);
-      b.addEventListener('click', function () {
-        if (o.status === st) return;
-        write('setStatus', { orderId: o.id, status: st }, function () { o.status = st; if (st !== 'pulling') o.nowPulling = false; });
-      });
-      sr.appendChild(b);
-    });
-    c.appendChild(sr);
+    // ── editable columns ──
+    c.appendChild(fieldCell('Boxes', boxStepper(o)));
+    c.appendChild(fieldCell('Start', timeEditor(o, 'start', o.t.pulling)));
+    c.appendChild(fieldCell('End', timeEditor(o, 'end', o.t.ready)));
+    c.appendChild(fieldCell('Pickup', timeEditor(o, 'pickup', o.pickupAt)));
+    c.appendChild(fieldCell('Est. min', estStepper(o)));
     return c;
+  }
+
+  function fieldCell(label, control) {
+    var cell = el('div', 'cell');
+    cell.appendChild(el('div', 'lbl', label));
+    cell.appendChild(control);
+    return cell;
+  }
+
+  function boxStepper(o) {
+    return stepper(o.boxes, 'box', function (next) {
+      o.boxes = next; debounce(o.id + 'box', function () { write('setBoxes', { orderId: o.id, boxes: o.boxes }); });
+    }, 0, 999, 1);
+  }
+  function estStepper(o) {
+    return stepper(o.waitMin, 'est', function (next) {
+      o.waitMin = next; debounce(o.id + 'wait', function () { write('setWait', { orderId: o.id, waitMin: o.waitMin }); }, 500);
+    }, EST_MIN, EST_MAX, EST_STEP);
+  }
+
+  // A milestone time: native time picker (great on iPad) + one-tap "Now" + clear.
+  function timeEditor(o, field, ms) {
+    var wrap = el('div', 'tedit');
+    var input = document.createElement('input');
+    input.type = 'time';
+    input.value = OM.msToHHMM(ms);
+    if (ms) input.className = 'set';
+    input.addEventListener('change', function () {
+      var newMs = OM.hhmmToMs(input.value, OM.effectiveNow());
+      write('setTime', { orderId: o.id, field: field, ms: newMs });
+    });
+    wrap.appendChild(input);
+
+    var now = el('button', 'nowbtn', 'Now');
+    now.addEventListener('click', function () { write('setTime', { orderId: o.id, field: field, ms: OM.effectiveNow() }); });
+    wrap.appendChild(now);
+
+    if (ms) {
+      var clr = el('button', 'clrbtn', '✕');
+      clr.title = 'Clear ' + field + ' time';
+      clr.addEventListener('click', function () { write('setTime', { orderId: o.id, field: field, ms: null }); });
+      wrap.appendChild(clr);
+    }
+    return wrap;
   }
 
   function stepper(val, cls, onChange, min, max, step) {
@@ -130,8 +144,14 @@
     return s;
   }
 
-  // advance pull timers each second
-  setInterval(function () { if (orders.length) render(); }, 1000);
+  // Advance the live pull timer each second — but never re-render (and tear down)
+  // while a native time picker is open (the input holds focus while editing).
+  setInterval(function () {
+    if (!orders.length) return;
+    var a = document.activeElement;
+    if (a && a.tagName === 'INPUT') return;
+    render();
+  }, 1000);
 
   function start() {
     poller = OM.startPolling({

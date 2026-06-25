@@ -20,6 +20,7 @@
  *   A OrderID B Customer C Status D Boxes E Addon1 F Addon2 G Addon3
  *   H WaitMin I Notes J Created K t_received L t_pulling M t_ready
  *   N t_invoiced O t_done P wait_set_at  Q QueuePos R NowPulling S CheckedInAt
+ *   T PickupAt  (customer pickup time — editable by warehouse op1 or sales op3)
  * ============================================================ */
 
 var SHEET_ORDERS = 'ORDERS';
@@ -31,9 +32,9 @@ var COL = {
   Addon1: 5, Addon2: 6, Addon3: 7, WaitMin: 8, Notes: 9,
   Created: 10, t_received: 11, t_pulling: 12, t_ready: 13,
   t_invoiced: 14, t_done: 15, wait_set_at: 16,
-  QueuePos: 17, NowPulling: 18, CheckedInAt: 19,
+  QueuePos: 17, NowPulling: 18, CheckedInAt: 19, PickupAt: 20,
 };
-var LAST_COL = 19;
+var LAST_COL = 20;
 
 var STAGE_COL = {
   received: COL.t_received, pulling: COL.t_pulling, ready: COL.t_ready,
@@ -43,7 +44,7 @@ var STAGE_ORDER = ['received', 'pulling', 'ready', 'invoiced', 'done'];
 
 var HEADERS = ['OrderID','Customer','Status','Boxes','Addon1','Addon2','Addon3',
   'WaitMin','Notes','Created','t_received','t_pulling','t_ready','t_invoiced',
-  't_done','wait_set_at','QueuePos','NowPulling','CheckedInAt'];
+  't_done','wait_set_at','QueuePos','NowPulling','CheckedInAt','PickupAt'];
 
 /* ── Status normalizer (mirror of assets/api.js) ───────────── */
 function normStatus(v) {
@@ -76,6 +77,7 @@ function ensureV2() {
     sh.getRange(2, c, sh.getMaxRows() - 1, 1).setNumberFormat(fmt);
   }
   sh.getRange(2, COL.CheckedInAt, sh.getMaxRows() - 1, 1).setNumberFormat(fmt);
+  sh.getRange(2, COL.PickupAt, sh.getMaxRows() - 1, 1).setNumberFormat(fmt);
   ensureLogSheet();
   return 'ensureV2 done';
 }
@@ -199,6 +201,43 @@ function doPost(e) {
         sh.getRange(r, COL.WaitMin).setValue(Math.max(0, parseInt(body.waitMin, 10) || 0));
         sh.getRange(r, COL.wait_set_at).setValue(now);
         break;
+      // Edit a milestone time from the warehouse iPad (op1) or sales window (op3).
+      // field: 'start' → t_pulling, 'end' → t_ready, 'pickup' → PickupAt (collected).
+      // ms: epoch millis, or null/'' to clear. Status is derived from the times.
+      case 'setTime':
+        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
+        bootstrapRow(sh, r, now);
+        var tWhen = (body.ms == null || body.ms === '') ? '' : new Date(Number(body.ms));
+        if (body.field === 'start') {
+          sh.getRange(r, COL.t_pulling).setValue(tWhen);
+          if (tWhen) {
+            sh.getRange(r, COL.Status).setValue('Pulling');
+            sh.getRange(r, COL.NowPulling).setValue('TRUE');
+            if (!sh.getRange(r, COL.t_received).getValue()) sh.getRange(r, COL.t_received).setValue(tWhen);
+          }
+        } else if (body.field === 'end') {
+          sh.getRange(r, COL.t_ready).setValue(tWhen);
+          if (tWhen) {
+            sh.getRange(r, COL.Status).setValue('Ready');
+            sh.getRange(r, COL.NowPulling).setValue('');
+            if (!sh.getRange(r, COL.t_pulling).getValue()) sh.getRange(r, COL.t_pulling).setValue(tWhen);
+          }
+        } else if (body.field === 'pickup') {
+          sh.getRange(r, COL.PickupAt).setValue(tWhen);
+          if (tWhen) {
+            stampStage(sh, r, 'ready', tWhen);            // backfill received→ready if missing
+            sh.getRange(r, COL.t_done).setValue(tWhen);
+            sh.getRange(r, COL.Status).setValue('Done');
+            sh.getRange(r, COL.NowPulling).setValue('');
+            archiveRow(sh, r);
+          } else if (normStatus(sh.getRange(r, COL.Status).getValue()) === 'done') {
+            sh.getRange(r, COL.Status).setValue('Ready');  // undo an accidental collection
+            sh.getRange(r, COL.t_done).setValue('');
+          }
+        } else {
+          return respond({ ok:false, error:'bad field' });
+        }
+        break;
       case 'togglePull':
         r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
         if (body.on) {
@@ -278,8 +317,9 @@ function validPin(pin) {
   if (!stored) return true;             // no PIN configured → open (first-run friendliness)
   return pin && sha256(String(pin)) === stored;
 }
-// Optional manual setter from the Apps Script editor.
-function setPinManual() { PropertiesService.getScriptProperties().setProperty('STAFF_PIN_SHA256', sha256('1234')); }
+// Optional manual setter from the Apps Script editor — enforces the staff PIN
+// baked into assets/config.js (DEFAULT_PIN = '9020'). Run once to require it.
+function setPinManual() { PropertiesService.getScriptProperties().setProperty('STAFF_PIN_SHA256', sha256('9020')); }
 
 /* ── Archive to LOG (concise) ──────────────────────────────── */
 function archiveRow(sh, row) {
@@ -342,6 +382,7 @@ function readOrders(view) {
       o.notes = r[COL.Notes - 1];
       o.t_received = msOf(r[COL.t_received - 1]); o.t_pulling = msOf(r[COL.t_pulling - 1]);
       o.t_ready = msOf(r[COL.t_ready - 1]); o.t_invoiced = msOf(r[COL.t_invoiced - 1]); o.t_done = msOf(r[COL.t_done - 1]);
+      o.pickupAt = msOf(r[COL.PickupAt - 1]);
     }
     out.push(o);
   }

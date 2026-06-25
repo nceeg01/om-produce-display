@@ -47,6 +47,17 @@
     .add-btn { width: 100%; margin-top: 16px; background: var(--orange); color: #fff; border: none; border-radius: 10px; padding: 16px; font-family: var(--f-head); font-size: 18px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
     .add-btn:active { filter: brightness(.96); }
     .add-hint { font-size: 12px; color: var(--muted2); margin-top: 12px; line-height: 1.5; }
+
+    /* Customer pickup-time editor (op3 can record collection) */
+    .qact { flex-wrap: wrap; justify-content: flex-end; }
+    .pu-cell { display: flex; flex-direction: column; gap: 4px; }
+    .pu-lbl { font-family: var(--f-head); font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted2); }
+    .pickedit { display: flex; align-items: center; gap: 4px; }
+    .pickedit input[type=time] { font-family: var(--f-head); font-size: 14px; font-weight: 800; border: 1px solid var(--border); border-radius: 7px; padding: 0 6px; height: 38px; background: var(--surface); color: var(--text); width: 92px; }
+    .pickedit input.set { border-color: var(--olive-m); background: var(--olive-l); color: var(--olive); }
+    .pickedit input[type=time]:focus { outline: none; border-color: var(--orange); }
+    .pu-now { height: 38px; padding: 0 9px; border: 1px solid var(--olive-m); background: #fff; color: var(--olive); border-radius: 7px; font-family: var(--f-head); font-weight: 800; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; }
+    .pu-now:active { background: var(--olive-l); }
   </style>
 </head>
 <body>
@@ -83,6 +94,7 @@
     <div class="btm-r"><span id="last-upd">—</span><span id="cdown"></span><a href="index.html">⚙ Settings</a></div>
   </div>
 
+  <script src="assets/env.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/sample.js"></script>
   <script src="assets/api.js"></script>

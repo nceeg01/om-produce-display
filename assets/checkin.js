@@ -44,6 +44,8 @@
   }
 
   function render() {
+    var a = document.activeElement;
+    if (a && a.tagName === 'INPUT' && a.type === 'time') return; // don't tear down an open pickup picker
     var q = activeQueue().filter(function (o) { return !filter || (o.customer || '').toLowerCase().indexOf(filter) >= 0; });
     document.getElementById('qcnt').textContent = q.length;
     var list = document.getElementById('qlist');
@@ -75,6 +77,8 @@
     });
     act.appendChild(here);
 
+    act.appendChild(pickupCell(o));
+
     var mv = el('div', 'mvcol');
     var up = el('button', 'mvbtn', '▲'); up.addEventListener('click', function () { move(o.id, -1); });
     var dn = el('button', 'mvbtn', '▼'); dn.addEventListener('click', function () { move(o.id, 1); });
@@ -85,6 +89,28 @@
   }
 
   function statusPill(key) { var m = OM.STATUS[key] || OM.STATUS.received; return el('span', 'pill ' + m.cls, m.label); }
+
+  // Customer pickup time — op3 records when the customer collects (→ marks Done).
+  function pickupCell(o) {
+    var cell = el('div', 'pu-cell');
+    cell.appendChild(el('div', 'pu-lbl', 'Pickup'));
+    var ed = el('div', 'pickedit');
+    var input = document.createElement('input');
+    input.type = 'time';
+    input.value = OM.msToHHMM(o.pickupAt);
+    if (o.pickupAt) input.className = 'set';
+    input.title = 'Customer pickup time';
+    input.addEventListener('change', function () {
+      write('setTime', { orderId: o.id, field: 'pickup', ms: OM.hhmmToMs(input.value, OM.effectiveNow()) });
+    });
+    ed.appendChild(input);
+    var now = el('button', 'pu-now', 'Now');
+    now.title = 'Mark picked up now';
+    now.addEventListener('click', function () { write('setTime', { orderId: o.id, field: 'pickup', ms: OM.effectiveNow() }); });
+    ed.appendChild(now);
+    cell.appendChild(ed);
+    return cell;
+  }
 
   function quickAdd() {
     var name = document.getElementById('qa-name').value.trim();

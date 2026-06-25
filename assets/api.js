@@ -75,6 +75,25 @@
     return fmtDate(ms) + ' | ' + fmtTime(ms);
   }
 
+  /* "HH:MM" (24h) — for prefilling an <input type="time">. */
+  function msToHHMM(ms) {
+    if (!ms) return '';
+    var d = new Date(ms);
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  /* Parse an <input type="time"> value ("HH:MM") onto the day of baseMs
+     (defaults to the server-corrected "today"), returning epoch ms or null. */
+  function hhmmToMs(hhmm, baseMs) {
+    if (!hhmm) return null;
+    var parts = String(hhmm).split(':');
+    if (parts.length < 2) return null;
+    var h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    var base = new Date(baseMs || effectiveNow());
+    base.setHours(h, m, 0, 0);
+    return base.getTime();
+  }
+
   /* ── Order normalization ─────────────────────────────────── */
   /* Accepts a raw order object from the Web App (or sample data)
      with flexible keys, returns a clean normalized record. */
@@ -105,6 +124,7 @@
       queuePos: (qp === '' || qp == null) ? null : Number(qp),
       nowPulling: truthy(pick('nowPulling', 'NowPulling')),
       checkedInAt: toMs(pick('checkedInAt', 'CheckedInAt')),
+      pickupAt: toMs(pick('pickupAt', 'PickupAt')),
       t: {
         received: toMs(pick('t_received')),
         pulling: toMs(pick('t_pulling')),
@@ -265,6 +285,16 @@
     if (action === 'setStatus' && o) { o.status = p.status; o['t_' + normStatus(p.status)] = o['t_' + normStatus(p.status)] || now; if (normStatus(p.status) !== 'pulling') o.NowPulling = ''; }
     else if (action === 'setBoxes' && o) o.boxes = Math.max(0, parseInt(p.boxes, 10) || 0);
     else if (action === 'setWait' && o) { o.waitMin = Math.max(0, parseInt(p.waitMin, 10) || 0); o.wait_set_at = now; }
+    else if (action === 'setTime' && o) {
+      var tms = (p.ms == null || p.ms === '') ? 0 : Number(p.ms);
+      if (p.field === 'start') { o.t_pulling = tms; if (tms) { o.status = 'Pulling'; o.NowPulling = 'TRUE'; if (!o.t_received) o.t_received = tms; } }
+      else if (p.field === 'end') { o.t_ready = tms; if (tms) { o.status = 'Ready'; o.NowPulling = ''; if (!o.t_pulling) o.t_pulling = tms; } }
+      else if (p.field === 'pickup') {
+        o.PickupAt = tms;
+        if (tms) { o.status = 'Done'; o.NowPulling = ''; o.t_done = tms; }
+        else if (normStatus(o.status) === 'done') { o.status = 'Ready'; o.t_done = 0; }
+      }
+    }
     else if (action === 'togglePull' && o) {
       var cnt = d.orders.filter(function (x) { return truthy(x.NowPulling); }).length;
       if (p.on && cnt >= getConfig().maxPulling && !truthy(o.NowPulling)) { var e = new Error('Max ' + getConfig().maxPulling + ' being pulled'); e.code = 'max'; return Promise.reject(e); }
@@ -301,11 +331,16 @@
   }
 
   /* ── Header clock (shared) ───────────────────────────────── */
-  function startClock(clockEl, dateEl) {
+  /* dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); anything else → "Thu, Jun 25". */
+  function startClock(clockEl, dateEl, dateStyle) {
     function t() {
       var n = new Date();
       if (clockEl) clockEl.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
-      if (dateEl) dateEl.textContent = n.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (dateEl) {
+        dateEl.textContent = dateStyle === 'dmy'
+          ? pad(n.getDate()) + '/' + pad(n.getMonth() + 1) + '/' + String(n.getFullYear()).slice(-2)
+          : n.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      }
     }
     setInterval(t, 1000); t();
   }
@@ -328,6 +363,8 @@
     fmtDateTime: fmtDateTime,
     fmtTime: fmtTime,
     fmtDate: fmtDate,
+    msToHHMM: msToHHMM,
+    hhmmToMs: hhmmToMs,
     toInt: toInt,
     pad: pad,
   };
