@@ -1,0 +1,9 @@
+{
+  "name": "om-produce-display",
+  "version": "2.0.0",
+  "private": true,
+  "description": "OM Produce real-time order display system (static site).",
+  "scripts": {
+    "build": "node scripts/gen-env.js"
+  }
+}
