@@ -57,10 +57,12 @@
 
   function render(orders) {
     lastOrders = orders;
-    var ready = orders.filter(isReady).sort(function (a, b) { return a.created - b.created; });
-    var pulling = orders.filter(function (o) { return o.status === 'pulling'; }).sort(function (a, b) { return a.created - b.created; });
-    var received = orders.filter(function (o) { return o.status === 'received'; }).sort(function (a, b) { return a.created - b.created; });
+    orders = orders.filter(function (o) { return o.status !== 'done'; }); // never show done
+    var ready = OM.sortOrders(orders.filter(isReady));
+    var pulling = OM.sortOrders(orders.filter(function (o) { return o.status === 'pulling'; }));
+    var received = OM.sortOrders(orders.filter(function (o) { return o.status === 'received'; }));
 
+    renderPrep(orders);
     renderServing(ready[0] || null);
 
     document.getElementById('qcnt').textContent = ready.length + pulling.length + received.length;
@@ -86,11 +88,27 @@
     }
   }
 
+  // "Now Preparing" banner — names the warehouse flagged (≤3), public-safe.
+  function renderPrep(orders) {
+    var pulling = orders.filter(function (o) { return o.nowPulling; }).slice(0, 3);
+    var strip = document.getElementById('prep');
+    var list = document.getElementById('prep-list');
+    list.innerHTML = '';
+    if (!pulling.length) { strip.style.display = 'none'; return; }
+    strip.style.display = '';
+    pulling.forEach(function (o) {
+      var c = el('div', 'prep-card');
+      c.appendChild(el('span', 'nm', o.customer || '—'));
+      list.appendChild(c);
+    });
+  }
+
   // Refresh once a second to advance the ETA countdowns.
   setInterval(function () { if (lastOrders.length) render(lastOrders); }, 1000);
 
   OM.startPolling({
     view: 'customer',
+    refresh: cfg.refreshTv,
     onData: function (res) {
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
       document.getElementById('ov').style.display = 'none';

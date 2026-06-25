@@ -50,8 +50,10 @@ body {
 
 /* ── Clock ─────────────────────────────────────────────────── */
 .clock-wrap { text-align: right; }
-.clock { font-family: var(--f-head); font-size: 30px; font-weight: 700; color: var(--text); letter-spacing: 2px; line-height: 1; }
-.dateline { font-size: 11px; color: var(--muted); letter-spacing: .5px; }
+.clock { font-family: var(--f-head); font-size: 40px; font-weight: 700; color: var(--text); letter-spacing: 2px; line-height: 1; }
+.clock.big { font-size: 56px; }
+.dateline { font-size: 12px; color: var(--muted); letter-spacing: .5px; margin-top: 2px; }
+@media (min-width: 1400px) { .clock.big { font-size: 64px; } }
 
 /* ── Status pill (shared vocabulary) ───────────────────────── */
 .pill {
@@ -109,6 +111,32 @@ body {
 .scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .scroll::-webkit-scrollbar-track { background: var(--surface2); }
 .scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── "Now Preparing" banner (warehouse-driven, ≤3) ─────────── */
+.prep {
+  display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+  padding: 10px 28px; background: var(--olive-l); border-bottom: 1px solid var(--olive-m);
+}
+.prep-lbl { font-family: var(--f-head); font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--olive); display: flex; align-items: center; gap: 8px; }
+.prep-lbl .ldot { background: var(--olive); }
+.prep-list { display: flex; gap: 10px; flex-wrap: wrap; }
+.prep-card { display: flex; align-items: baseline; gap: 10px; background: #fff; border: 1px solid var(--olive-m); border-radius: 6px; padding: 6px 14px; animation: prepin .4s ease-out; }
+@keyframes prepin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.prep-card .nm { font-family: var(--f-head); font-size: 22px; font-weight: 800; color: var(--text); }
+.prep-card .tm { font-family: var(--f-head); font-size: 13px; font-weight: 700; color: var(--olive); }
+.prep-empty { color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .prep-card { animation: none; } }
+
+/* ── Toast ─────────────────────────────────────────────────── */
+#toast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.toast { background: var(--text); color: #fff; font-family: var(--f-head); font-size: 14px; font-weight: 700; letter-spacing: .5px; padding: 10px 20px; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.2); animation: tin .25s ease-out; }
+.toast.err { background: var(--red); }
+.toast.ok { background: var(--olive); }
+@keyframes tin { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+/* ── PIN gate ──────────────────────────────────────────────── */
+.pin-in { width: 100%; text-align: center; letter-spacing: 8px; font-size: 28px; font-family: var(--f-head); font-weight: 800; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; outline: none; margin-bottom: 12px; }
+.pin-in:focus { border-color: var(--orange); }
 
 /* ── Empty state ───────────────────────────────────────────── */
 .empty { text-align: center; padding: 72px 40px; color: var(--muted); }

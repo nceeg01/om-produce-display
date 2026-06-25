@@ -62,9 +62,27 @@
     });
   };
 
+  window.setStaffPinFlow = function () {
+    var pin = $('pin').value.trim();
+    if (pin.length < 4) { setMsg('PIN must be 4+ digits.', 'err'); return; }
+    persist();
+    saveStaffPin(pin);                       // remember on this device
+    var cfg = getConfig();
+    if (!cfg.url) { setMsg('PIN saved on this device (demo mode — no server).', 'ok'); $('pin').value = ''; return; }
+    setMsg('Setting PIN…', '');
+    OM.post('setPin', { pin: pin })
+      .then(function () { setMsg('✓ PIN set on the server and saved on this device.', 'ok'); $('pin').value = ''; })
+      .catch(function (err) {
+        if (err.code === 'exists') setMsg('Server already has a PIN. Saved on this device. To change the server PIN, clear it in Script Properties first.', 'ok');
+        else setMsg('Saved locally. Server: ' + (err.message || err.code || 'error'), 'err');
+        $('pin').value = '';
+      });
+  };
+
   window.clearCfg = function () {
     try { localStorage.removeItem(C.LS_URL); localStorage.removeItem(C.LS_TOKEN); } catch (e) {}
-    $('url').value = ''; $('token').value = '';
+    clearStaffPin();
+    $('url').value = ''; $('token').value = ''; $('pin').value = '';
     $('prev-wrap').style.display = 'none';
     setStatus(false, 'Not connected');
     setMsg('Cleared.', '');

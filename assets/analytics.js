@@ -14,8 +14,12 @@
     return e;
   }
 
+  // Prefer precomputed LOG minutes (real mode); fall back to timestamp math (demo).
   function durations(orders) {
     return orders.map(function (o) {
+      if (o.pullMin != null || o.cycleMin != null) {
+        return { o: o, waitToPull: (o.waitToPullMin || 0) * 60000, pull: (o.pullMin || 0) * 60000, invoiceLag: 0, cycle: (o.cycleMin || 0) * 60000 };
+      }
       return {
         o: o,
         waitToPull: pos(o.t.pulling - o.t.received),
