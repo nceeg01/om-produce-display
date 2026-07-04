@@ -48,6 +48,40 @@
   }
   function toInt(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
   function pad(n) { return String(n).padStart(2, '0'); }
+  function displayTimeZone() { return (getConfig().timeZone || 'America/Chicago'); }
+  function displayTimeZoneLabel() { return getConfig().timeZoneLabel || 'CST'; }
+  function zonedParts(ms) {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: displayTimeZone(),
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date(ms || effectiveNow()));
+    var out = {};
+    parts.forEach(function (p) {
+      if (p.type !== 'literal') out[p.type] = p.value;
+    });
+    if (out.hour === '24') out.hour = '00';
+    return {
+      year: Number(out.year),
+      month: Number(out.month),
+      day: Number(out.day),
+      hour: Number(out.hour),
+      minute: Number(out.minute),
+      second: Number(out.second),
+    };
+  }
+  function zonedDateMs(y, mo, d, h, mi) {
+    var guess = Date.UTC(y, mo - 1, d, h, mi, 0, 0);
+    var p = zonedParts(guess);
+    var delta = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) -
+      Date.UTC(y, mo - 1, d, h, mi, 0);
+    return guess - delta;
+  }
 
   /* "7m", "1h 04m" from a millisecond duration */
   function fmtDuration(ms) {
@@ -60,15 +94,15 @@
   /* Date / time helpers — "23/06/2026 | 9:32 am" */
   function fmtTime(ms) {
     if (!ms) return '';
-    var d = new Date(ms), h = d.getHours(), m = d.getMinutes();
+    var p = zonedParts(ms), h = p.hour, m = p.minute;
     var ap = h >= 12 ? 'pm' : 'am';
     var h12 = h % 12 || 12;
     return h12 + ':' + pad(m) + ' ' + ap;
   }
   function fmtDate(ms) {
     if (!ms) return '';
-    var d = new Date(ms);
-    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+    var p = zonedParts(ms);
+    return pad(p.day) + '/' + pad(p.month) + '/' + p.year;
   }
   function fmtDateTime(ms) {
     if (!ms) return '';
@@ -78,8 +112,8 @@
   /* "HH:MM" (24h) — for prefilling an <input type="time">. */
   function msToHHMM(ms) {
     if (!ms) return '';
-    var d = new Date(ms);
-    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+    var p = zonedParts(ms);
+    return pad(p.hour) + ':' + pad(p.minute);
   }
   /* Parse an <input type="time"> value ("HH:MM") onto the day of baseMs
      (defaults to the server-corrected "today"), returning epoch ms or null. */
@@ -89,9 +123,8 @@
     if (parts.length < 2) return null;
     var h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
     if (isNaN(h) || isNaN(m)) return null;
-    var base = new Date(baseMs || effectiveNow());
-    base.setHours(h, m, 0, 0);
-    return base.getTime();
+    var bp = zonedParts(baseMs || effectiveNow());
+    return zonedDateMs(bp.year, bp.month, bp.day, h, m);
   }
 
   /* ── Order normalization ─────────────────────────────────── */
@@ -193,6 +226,39 @@
   }
 
   /* ── Web App fetch (JSON first, JSONP fallback) ──────────── */
+  var DEMO_KEY = 'om_demo_state_v2';
+
+  function loadDemoData() {
+    if (global.__OM_DEMO) return global.__OM_DEMO;
+    try {
+      var raw = global.sessionStorage && global.sessionStorage.getItem(DEMO_KEY);
+      if (raw) {
+        var saved = JSON.parse(raw);
+        if (saved && Array.isArray(saved.orders)) {
+          saved.serverNow = Date.now();
+          global.__OM_DEMO = saved;
+          return saved;
+        }
+      }
+    } catch (e) {}
+    var fresh = global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() };
+    saveDemoData(fresh);
+    return fresh;
+  }
+
+  function saveDemoData(data) {
+    data.serverNow = Date.now();
+    global.__OM_DEMO = data;
+    try {
+      if (global.sessionStorage) {
+        global.sessionStorage.setItem(DEMO_KEY, JSON.stringify({
+          orders: data.orders,
+          serverNow: data.serverNow,
+        }));
+      }
+    } catch (e) {}
+  }
+
   function buildUrl(base, view, token, extra) {
     var sep = base.indexOf('?') >= 0 ? '&' : '?';
     var q = 'view=' + encodeURIComponent(view) +
@@ -216,12 +282,16 @@
     });
   }
 
+  function hasLiveConnection(cfg) {
+    return !!(cfg && cfg.url && cfg.token);
+  }
+
   /* Returns { orders:[…], serverNow, demo:false }.
-     In DEMO mode (no URL configured) returns sample data. */
+     In DEMO mode (no live URL+token pair) returns sample data. */
   function fetchData(view) {
     var cfg = getConfig();
-    if (!cfg.url) {
-      var d = global.__OM_DEMO || (global.__OM_DEMO = (global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() }));
+    if (!hasLiveConnection(cfg)) {
+      var d = loadDemoData();
       setServerNow(Date.now());
       return Promise.resolve({ orders: d.orders.map(normOrder), serverNow: Date.now(), demo: true });
     }
@@ -253,11 +323,11 @@
 
   /* ── Write API (doPost; text/plain to avoid CORS preflight) ── */
   /* post('setStatus', {orderId, status}) → resolves to { orders, serverNow }
-     In DEMO mode (no URL) it mutates the in-memory sample and returns it. */
+     In DEMO mode (no live URL+token pair) it mutates the in-memory sample and returns it. */
   function post(action, payload) {
     var cfg = getConfig();
     payload = payload || {};
-    if (!cfg.url) return Promise.resolve(demoMutate(action, payload));
+    if (!hasLiveConnection(cfg)) return Promise.resolve(demoMutate(action, payload));
     var body = Object.assign({ action: action, key: cfg.token, pin: cfg.pin }, payload);
     return fetch(cfg.url, {
       method: 'POST',
@@ -278,7 +348,7 @@
 
   /* Apply a write to the in-memory demo dataset so DEMO mode is interactive. */
   function demoMutate(action, p) {
-    var d = global.__OM_DEMO || (global.__OM_DEMO = (global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() }));
+    var d = loadDemoData();
     var now = Date.now();
     function find(id) { return d.orders.filter(function (o) { return String(o.id) === String(p.orderId); })[0]; }
     var o = find(p.orderId);
@@ -303,6 +373,7 @@
     else if (action === 'checkIn' && o) o.CheckedInAt = now;
     else if (action === 'reorder') (p.orderIds || []).forEach(function (id, i) { var x = d.orders.filter(function (q) { return String(q.id) === String(id); })[0]; if (x) x.QueuePos = i + 1; });
     else if (action === 'quickAdd') d.orders.unshift({ id: 'WALK-' + String(now).slice(-4), customer: p.customer, status: 'Received', boxes: 0, created: now, CheckedInAt: now, QueuePos: 0, t_received: now, addon1: (p.addons || [])[0] || '' });
+    saveDemoData(d);
     setServerNow(now);
     return { orders: d.orders.map(normOrder), serverNow: now, demo: true };
   }
@@ -334,15 +405,24 @@
   /* dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); anything else → "Thu, Jun 25". */
   function startClock(clockEl, dateEl, dateStyle) {
     function t() {
-      var n = new Date();
-      if (clockEl) clockEl.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
+      var now = effectiveNow();
+      var p = zonedParts(now);
+      if (clockEl) clockEl.textContent = pad(p.hour) + ':' + pad(p.minute);
       if (dateEl) {
         dateEl.textContent = dateStyle === 'dmy'
-          ? pad(n.getDate()) + '/' + pad(n.getMonth() + 1) + '/' + String(n.getFullYear()).slice(-2)
-          : n.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          ? pad(p.day) + '/' + pad(p.month) + '/' + String(p.year).slice(-2) + ' ' + displayTimeZoneLabel()
+          : new Intl.DateTimeFormat('en-US', { timeZone: displayTimeZone(), weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(now)) + ' ' + displayTimeZoneLabel();
       }
     }
     setInterval(t, 1000); t();
+  }
+
+  function fmtUpdateTime(ms) {
+    var p = zonedParts(ms || effectiveNow());
+    return pad(p.hour) + ':' + pad(p.minute) + ':' + pad(p.second) + ' ' + displayTimeZoneLabel();
+  }
+  function hourOfDay(ms) {
+    return zonedParts(ms).hour;
   }
 
   /* ── Public surface ──────────────────────────────────────── */
@@ -353,9 +433,12 @@
     sortOrders: sortOrders,
     fetchData: fetchData,
     post: post,
+    hasLiveConnection: hasLiveConnection,
     startPolling: startPolling,
     startClock: startClock,
     effectiveNow: effectiveNow,
+    fmtUpdateTime: fmtUpdateTime,
+    hourOfDay: hourOfDay,
     etaSeconds: etaSeconds,
     fmtEta: fmtEta,
     pullElapsedMs: pullElapsedMs,

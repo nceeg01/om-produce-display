@@ -1,7 +1,7 @@
 /* ============================================================
    OM Produce — Sample data (DEMO mode only)
-   Used when no Web-App URL is configured, so the screens render
-   for UI review. Real deployments never hit this.
+   Used when no live Web-App URL + API token pair is configured, so screens render
+   for UI review. Live deployments with OM_API_TOKEN never hit this.
    Exercises v2 fields: NowPulling, CheckedInAt, QueuePos.
    ============================================================ */
 window.OM_SAMPLE = function () {

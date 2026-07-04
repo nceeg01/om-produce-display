@@ -29,7 +29,7 @@
      is stored). In demo mode there's no backend, so we skip straight through. */
   function pinGate(onReady) {
     var cfg = getConfig();
-    if (!cfg.url || cfg.pin) { onReady(); return; }
+    if (!OM.hasLiveConnection(cfg) || cfg.pin) { onReady(); return; }
 
     var ov = document.createElement('div');
     ov.className = 'ov';

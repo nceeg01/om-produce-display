@@ -69,7 +69,7 @@
     orders.forEach(function (o) {
       var t = o.t.done || o.t.ready;
       if (!t) return;
-      var h = new Date(t).getHours();
+      var h = OM.hourOfDay(t);
       buckets[h] = (buckets[h] || 0) + 1;
     });
     var hours = Object.keys(buckets).map(Number).sort(function (a, b) { return a - b; });
@@ -127,8 +127,8 @@
     view: 'analytics',
     onData: function (res) {
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
-      document.getElementById('lpill').className = 'live-pill';
-      document.getElementById('ltxt').textContent = 'LIVE';
+      document.getElementById('lpill').className = 'live-pill' + (res.demo ? ' loading' : '');
+      document.getElementById('ltxt').textContent = res.demo ? 'DEMO' : 'LIVE';
       render(res.orders);
     },
     onError: function () {

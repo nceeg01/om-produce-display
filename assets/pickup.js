@@ -138,15 +138,15 @@
     onData: function (res) {
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
       document.getElementById('ov').style.display = 'none';
-      setLive('', 'LIVE');
+      setLive(res.demo ? 'loading' : '', res.demo ? 'DEMO' : 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        'Updated ' + OM.fmtUpdateTime(res.serverNow);
       render(res.orders);
     },
     onError: function (err) {
       setLive('err', 'Error');
       document.getElementById('last-upd').textContent = (err && err.message) || 'Load failed — retrying';
-      if (!cfg.url) document.getElementById('ov').style.display = 'flex';
+      if (!OM.hasLiveConnection(cfg)) document.getElementById('ov').style.display = 'flex';
     },
     onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
   });
