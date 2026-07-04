@@ -4,6 +4,7 @@
   "private": true,
   "description": "OM Produce real-time order display system (static site).",
   "scripts": {
-    "build": "node scripts/gen-env.js"
+    "build": "node scripts/gen-env.js",
+    "lint": "node --check scripts/gen-env.js && node --check assets/admin.js && node --check assets/analytics.js && node --check assets/api.js && node --check assets/checkin.js && node --check assets/config.js && node --check assets/control.js && node --check assets/env.js && node --check assets/pickup.js && node --check assets/sample.js && node --check assets/ui.js && node --check assets/warehouse.js && node --check assets/window.js"
   }
 }

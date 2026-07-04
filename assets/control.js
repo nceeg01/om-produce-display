@@ -158,8 +158,8 @@
       view: 'warehouse',
       refresh: cfg.refreshInteractive,
       onData: function (res) {
-        setLive('', 'LIVE');
-        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now());
+        setLive(res.demo ? 'loading' : '', res.demo ? 'DEMO' : 'LIVE');
+        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtUpdateTime(res.serverNow);
         applySnapshot(res);
       },
       onError: function (err) { setLive('err', 'ERR'); document.getElementById('last-upd').textContent = (err && err.message) || 'Sync failed'; },

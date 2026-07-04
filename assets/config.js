@@ -33,6 +33,10 @@ window.OM_CONFIG = {
   /* Max concurrent "now pulling" (mirrors Apps Script MAX_PULLING) */
   MAX_PULLING: 3,
 
+  /* Display timezone: show every kiosk/TV clock in Central time. */
+  DISPLAY_TIME_ZONE: 'America/Chicago',
+  DISPLAY_TIME_ZONE_LABEL: 'CST',
+
   /* localStorage keys */
   LS_URL: 'om_webapp_url',
   LS_TOKEN: 'om_webapp_token',
@@ -77,6 +81,8 @@ window.getConfig = function getConfig() {
     tvRotateSec: c.TV_ROTATE_SEC,
     stalePullMin: c.STALE_PULL_MIN,
     maxPulling: c.MAX_PULLING,
+    timeZone: c.DISPLAY_TIME_ZONE,
+    timeZoneLabel: c.DISPLAY_TIME_ZONE_LABEL,
   };
 };
 

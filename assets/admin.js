@@ -18,7 +18,8 @@
     var cfg = getConfig();
     if (cfg.url) $('url').value = cfg.url;
     if (cfg.token) $('token').value = cfg.token;
-    if (cfg.url) setStatus(true, 'Configured — using saved connection');
+    if (OM.hasLiveConnection(cfg)) setStatus(true, 'Configured — using saved live connection');
+    else if (cfg.url) setStatus(false, 'Needs API token — review screens use demo data until then');
   }
 
   function persist() {
@@ -37,13 +38,12 @@
     setMsg('Testing…', '');
     fetchPreview().then(function (res) {
       if (res.demo) {
-        setMsg('No URL set — showing DEMO data. Paste a Web App URL to go live.', 'err');
-        setStatus(false, 'Demo mode (not connected)');
+        setMsg('No live token set — showing DEMO data. Add OM_API_TOKEN in Vercel, or paste a token here for local testing.', 'err');
+        setStatus(false, 'Demo mode (not connected to live sheet)');
         showPreview(res.orders);
         return;
       }
-      var time = new Date().toLocaleTimeString();
-      setStatus(true, 'Connected — last update ' + time);
+      setStatus(true, 'Connected — last update ' + OM.fmtUpdateTime(Date.now()));
       setMsg('✓ Connected. Found ' + res.orders.length + ' orders. Screens will use this connection.', 'ok');
       showPreview(res.orders);
     }).catch(function (err) {
@@ -68,7 +68,7 @@
     persist();
     saveStaffPin(pin);                       // remember on this device
     var cfg = getConfig();
-    if (!cfg.url) { setMsg('PIN saved on this device (demo mode — no server).', 'ok'); $('pin').value = ''; return; }
+    if (!OM.hasLiveConnection(cfg)) { setMsg('PIN saved on this device (demo mode — no server).', 'ok'); $('pin').value = ''; return; }
     setMsg('Setting PIN…', '');
     OM.post('setPin', { pin: pin })
       .then(function () { setMsg('✓ PIN set on the server and saved on this device.', 'ok'); $('pin').value = ''; })

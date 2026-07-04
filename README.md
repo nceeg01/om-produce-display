@@ -104,8 +104,9 @@ The committed `assets/env.js` is an empty stub, so the repo never holds the toke
 (no build) the token is empty — paste it once on the admin page (saved to localStorage) for
 dev. To re-point the fleet URL permanently, edit the constant at the top of `config.js`.
 
-> **Demo mode:** with no URL configured, every screen renders built-in sample data
-> (`assets/sample.js`) so you can preview the UI before the sheet/script are ready.
+> **Demo mode:** without a live URL + API token pair, every screen renders built-in sample
+> data (`assets/sample.js`) so review builds are usable before Vercel injects
+> `OM_API_TOKEN`. Live deployments with that token read the sheet instead.
 
 ## Daily use
 

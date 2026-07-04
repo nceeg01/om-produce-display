@@ -9,7 +9,7 @@
  *
  * SETUP / RE-DEPLOY (v2)
  *   1. Paste this file into Extensions → Apps Script (replace v1).
- *   2. Run ensureV2()  once (adds columns Q/R/S + LOG header). Authorize.
+ *   2. Run ensureV2()  once (adds columns Q-T + LOG header). Authorize.
  *   3. Script Properties: API_TOKEN = <random>.  (STAFF_PIN_SHA256 is set later
  *      from the app's admin page, or via setPinManual below.)
  *   4. Triggers → installable "On edit" → onEditTrigger (for manual edits).
@@ -408,7 +408,7 @@ function msOf(v) { if (!v) return 0; if (v instanceof Date) return v.getTime(); 
 function mins(ms) { return ms > 0 ? Math.round(ms / 60000) : 0; }
 function hm(ms) { return Utilities.formatDate(new Date(ms), tz(), 'h:mm a').toLowerCase(); }
 function dmy(ms) { return Utilities.formatDate(new Date(ms), tz(), 'dd/MM/yyyy'); }
-function tz() { return SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || 'America/Los_Angeles'; }
+function tz() { return SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || 'America/Chicago'; }
 
 function respond(obj, callback) {
   var json = JSON.stringify(obj);
