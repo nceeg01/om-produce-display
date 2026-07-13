@@ -42,14 +42,15 @@
     .qdots { display: flex; gap: 6px; }
     .qdot { width: 9px; height: 9px; border-radius: 50%; background: var(--border2); transition: background .3s, transform .3s; }
     .qdot.on { background: var(--orange); transform: scale(1.25); }
-    .qscroll { flex: 1; overflow-y: auto; }
-    .sec-hdr { padding: 7px 28px; font-family: var(--f-head); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
-    .qitem { display: flex; align-items: center; gap: 14px; padding: 14px 28px; border-bottom: 1px solid var(--border); background: #fff; }
-    .qpos { font-family: var(--f-head); font-size: 26px; font-weight: 900; color: var(--muted2); min-width: 36px; }
-    .qinfo { flex: 1; }
-    .qname { font-family: var(--f-head); font-size: 30px; font-weight: 800; line-height: 1; }
-    .qsub { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
-    .qeta { margin-left: auto; flex-shrink: 0; font-family: var(--f-head); font-size: 17px; font-weight: 800; letter-spacing: .3px; }
+    /* Rows flex to share the panel height, so a full page (≤10) always
+       fits on screen with no scrolling — rotation handles the overflow. */
+    .qscroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    .qitem { flex: 1 1 0; min-height: 0; display: flex; align-items: center; gap: 14px; padding: 4px 28px; border-bottom: 1px solid var(--border); background: #fff; }
+    .qitem:last-child { border-bottom: none; }
+    .qpos { font-family: var(--f-head); font-size: clamp(16px, 2.6vh, 26px); font-weight: 900; color: var(--muted2); min-width: 36px; }
+    .qinfo { flex: 1; min-width: 0; }
+    .qname { font-family: var(--f-head); font-size: clamp(18px, 3.6vh, 32px); font-weight: 800; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qeta { margin-left: auto; flex-shrink: 0; font-family: var(--f-head); font-size: clamp(13px, 2.2vh, 18px); font-weight: 800; letter-spacing: .3px; }
     .qeta.ready    { color: var(--olive); }
     .qeta.pulling  { color: var(--amber); }
     .qeta.received { color: var(--muted); font-weight: 700; }

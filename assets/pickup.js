@@ -1,20 +1,20 @@
 /* ============================================================
    OM Produce — Customer Pickup TV (name only, no boxes)
    • "Now Ready" hero (the next person to collect)
-   • Rotating queue: 5–7 customers per page, auto-advancing every few
-     seconds, each line showing its own ETA. (issues #5, #7)
+   • Rotating queue: up to 10 customers per page (rows flex to fit),
+     auto-advancing every ~5s, each line showing its own ETA.
    ============================================================ */
 (function () {
   'use strict';
   var cfg = getConfig();
-  var PAGE_SIZE = cfg.tvPageSize || 6;       // customers per page (5–7)
+  var PAGE_SIZE = cfg.tvPageSize || 10;      // at most this many customers per page
   var ROTATE_SEC = cfg.tvRotateSec || 5;     // seconds before the next page
 
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'), 'dmy'); // hh:mm + dd/mm/yy
   OM.kiosk();
 
   var lastOrders = [], prevName = '';
-  var page = 0, queueIds = '', secTick = 0;
+  var rot = OM.makeRotator(PAGE_SIZE, ROTATE_SEC);
 
   function setLive(state, txt) {
     document.getElementById('lpill').className = 'live-pill' + (state ? ' ' + state : '');
@@ -69,14 +69,14 @@
     return it;
   }
 
-  // Page indicator (dots + "8–13 of 19") in the queue header.
-  function renderPageInd(total, pages, startI, count) {
+  // Page indicator (dots + "11–15 of 15") in the queue header.
+  function renderPageInd(v) {
     var host = document.getElementById('qpage');
     host.innerHTML = '';
-    if (pages <= 1) return;
-    var lbl = el('span', 'pglbl', (startI + 1) + '–' + (startI + count) + ' of ' + total);
+    if (!v || v.pages <= 1) return;
+    var lbl = el('span', 'pglbl', (v.start + 1) + '–' + (v.start + v.count) + ' of ' + v.total);
     var dots = el('div', 'qdots');
-    for (var i = 0; i < pages; i++) dots.appendChild(el('div', 'qdot' + (i === page ? ' on' : '')));
+    for (var i = 0; i < v.pages; i++) dots.appendChild(el('div', 'qdot' + (i === v.page ? ' on' : '')));
     host.appendChild(lbl);
     host.appendChild(dots);
   }
@@ -95,24 +95,16 @@
     var queue = ready.slice(1).concat(pulling, received);
     document.getElementById('qcnt').textContent = queue.length;
 
-    // Reset rotation when the set of customers changes (don't strand on a stale page).
-    var ids = queue.map(function (o) { return o.id || o.customer; }).join('|');
-    if (ids !== queueIds) { queueIds = ids; page = 0; secTick = 0; }
-
-    var pages = Math.max(1, Math.ceil(queue.length / PAGE_SIZE));
-    if (page >= pages) page = 0;
-    var startI = page * PAGE_SIZE;
-    var slice = queue.slice(startI, startI + PAGE_SIZE);
-
+    var v = rot.view(queue);
     var list = document.getElementById('qlist');
     list.innerHTML = '';
-    if (!slice.length) {
+    if (!v.slice.length) {
       list.appendChild(el('div', 'qempty', 'No orders in queue right now.'));
-      renderPageInd(0, 1, 0, 0);
+      renderPageInd(null);
       return;
     }
-    slice.forEach(function (o, i) { list.appendChild(qitem(o, startI + i + 1)); });
-    renderPageInd(queue.length, pages, startI, slice.length);
+    v.slice.forEach(function (o, i) { list.appendChild(qitem(o, v.start + i + 1)); });
+    renderPageInd(v);
   }
 
   // "Now Preparing" banner — names the warehouse flagged (≤3), public-safe.
@@ -133,8 +125,7 @@
   // Once a second: advance ETA countdowns, and rotate to the next page every ROTATE_SEC.
   setInterval(function () {
     if (!lastOrders.length) return;
-    secTick++;
-    if (secTick >= ROTATE_SEC) { secTick = 0; page++; }   // render() wraps page within range
+    rot.tick();
     render(lastOrders);
   }, 1000);
 
@@ -146,7 +137,7 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+        'Updated ' + OM.fmtTime(OM.effectiveNow()) +
         (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },

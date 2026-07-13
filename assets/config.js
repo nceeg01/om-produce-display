@@ -27,13 +27,19 @@ window.OM_CONFIG = {
   TOKEN: '',                 // injected at deploy from Vercel env (assets/env.js)
   DEFAULT_PIN: '9020',       // staff PIN for /control + /checkin (auto-unlock, no prompt)
 
+  /* Fleet timezone — every clock, timestamp and ETA renders in THIS zone
+     (CST/CDT handled automatically), no matter how a TV's own clock is set.
+     The clock also syncs itself against server time, so a drifting TV
+     still shows the right time. */
+  TIMEZONE: 'America/Chicago',
+
   /* Polling cadence (seconds) */
   REFRESH_TV: 10,            // /warehouse /pickup /window /analytics
   REFRESH_INTERACTIVE: 5,    // /control /checkin (plus instant refresh after writes)
 
   /* Customer Pickup TV — paginated, auto-rotating queue */
-  TV_PAGE_SIZE: 6,           // customers shown per page (5–7 reads well on a TV)
-  TV_ROTATE_SEC: 5,          // seconds before advancing to the next page
+  TV_PAGE_SIZE: 10,          // at most 10 customers per page; rows shrink to fit
+  TV_ROTATE_SEC: 5,          // seconds before auto-advancing to the next page
 
   /* Warehouse: highlight an order stuck in "pulling" longer than this */
   STALE_PULL_MIN: 20,
@@ -68,6 +74,7 @@ window.OM_CONFIG = {
   if (env.CSV_URL) window.OM_CONFIG.CSV_URL = env.CSV_URL;
   if (env.TOKEN) window.OM_CONFIG.TOKEN = env.TOKEN;
   if (env.DEFAULT_PIN) window.OM_CONFIG.DEFAULT_PIN = env.DEFAULT_PIN;
+  if (env.TIMEZONE) window.OM_CONFIG.TIMEZONE = env.TIMEZONE;
 })(window.OM_ENV);
 
 window.getConfig = function getConfig() {

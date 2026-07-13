@@ -141,7 +141,7 @@
       refresh: cfg.refreshInteractive,
       onData: function (res) {
         setLive('', 'LIVE');
-        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now()) +
+        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(OM.effectiveNow()) +
           (res.source === 'csv' ? ' · sheet feed (writes still live)' : '');
         applySnapshot(res);
       },

@@ -26,6 +26,7 @@
     .col-hd .cnt { font-family: var(--f-head); font-size: 16px; font-weight: 800; padding: 2px 12px; border-radius: 20px; }
     .col-hd .cnt.go { background: var(--olive-l); color: var(--olive); border: 1px solid var(--olive-m); }
     .col-hd .cnt.next { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .col-hd .pgind { margin-left: auto; font-family: var(--f-head); font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
 
     .list { flex: 1; overflow-y: auto; padding: 14px 20px 24px; }
 
@@ -73,6 +74,7 @@
       <div class="col-hd">
         <span class="t go">✓ Ready to Invoice</span>
         <span class="cnt go" id="inv-cnt">0</span>
+        <span class="pgind" id="inv-page"></span>
       </div>
       <div class="list scroll" id="inv-list"></div>
     </div>

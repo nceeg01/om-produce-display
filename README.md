@@ -25,10 +25,10 @@ Google Sheet ──┬─(Apps Script Web App — token JSON, read+write)──�
 | URL | Audience | Shows / does |
 |-----|----------|-------|
 | `/` | Admin | Preview + setup guide (connection is now baked in — see below) |
-| `/control` | **Warehouse iPad** | **Tap to edit** — ±boxes, **Start / End / Pickup** times (tap a time or **Now**), **±5-min estimate**. Status auto-derives. Auto-unlocks. |
+| `/control` | **Warehouse iPad** | **One big tap per stage** (▶ Start Pulling → ✓ Done Pulling → 📦 Picked Up) + ±boxes, ±5-min estimate, editable **Start/End/Pickup** time chips, tap-to-filter counters. Auto-unlocks. |
 | `/checkin` | **Sales window (op3)** | **Mark arrivals, reorder the queue, quick-add walk-ins, record customer pickup time.** Auto-unlocks. |
 | `/warehouse` | Warehouse TV | Orders by stage, boxes, addons, live pull timers, "Now Pulling" strip, stale alerts |
-| `/pickup` | Customer TV | "Now Ready" hero + **rotating queue (5–7 / page, every 5s)** with per-line ETAs (customer **name** only) |
+| `/pickup` | Customer TV | "Now Ready" hero + **rotating queue (≤10 / page, auto-advances every 5s)** with per-line ETAs (customer **name** only) |
 | `/window` | Sales desk TV | What to invoice **now** + what's coming up, with arrival times |
 | `/analytics` | Manager | Pull times, throughput by hour, boxes/hour, slowest orders |
 
@@ -150,5 +150,9 @@ All shared logic lives once in `assets/api.js` (`OM.*`) — pages are thin rende
 `OM.fetchData(view)` handles the Web-App→CSV fallback chain transparently for every page.
 Sync: TV pages refresh every **10s**, interactive pages every **5s** + instantly after each tap
 (tunable in `assets/config.js`). Kiosk hardening: screens hold a wake-lock and self-reload
-once during the 3am hour. In **demo mode** (nothing configured) every page — including taps
-on `/control` and `/checkin` — works against in-memory sample data.
+once during the 3am hour. **Clock & timestamps:** everything renders in the fleet timezone
+(`TIMEZONE` in config.js — **America/Chicago**, CST/CDT automatic) and the clock syncs itself
+against server time (Vercel edge `Date` header every 10 min, Apps Script `serverNow` as
+backup) — a TV with a wrong or drifting clock still shows accurate CST times and ETAs.
+In **demo mode** (nothing configured) every page — including taps on `/control` and
+`/checkin` — works against in-memory sample data.

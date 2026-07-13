@@ -1,8 +1,10 @@
 /* ============================================================
-   OM Produce — Warehouse iPad control (tap to update)
-   Columns: Order# · Customer · Boxes(±) · Start · End · Pickup · Est(±5)
-   Status is derived from the milestone times:
-     set Start → Pulling, set End → Ready, set Pickup → Done (collected).
+   OM Produce — Warehouse iPad control (v3: one-tap flow)
+   Each order card shows ONE big next-step button:
+     Received → [Start Pulling] → Pulling → [Done Pulling] → Ready
+     → [Picked Up] → Done (order leaves the board, archived to LOG).
+   Corrections stay one tap away: editable Start/End/Pickup time chips
+   and big ± steppers for Boxes / Est. Summary chips filter the board.
    Optimistic UI + debounced numeric writes + server snapshot reconcile.
    ============================================================ */
 (function () {
@@ -10,6 +12,7 @@
   var cfg = getConfig();
   var orders = [];
   var poller = null;
+  var filter = 'all';
   var EST_MIN = 0, EST_MAX = 60, EST_STEP = 5;   // 5-minute estimate increments
 
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
@@ -39,19 +42,29 @@
       .catch(function (err) { OMUI.handleWriteError(err, function () { poller && poller.reload(); }); if (poller) poller.reload(); });
   }
 
+  function matchesFilter(o) {
+    if (filter === 'all') return true;
+    if (filter === 'ready') return o.status === 'ready' || o.status === 'invoiced';
+    return o.status === filter;
+  }
+
   function render() {
-    var sorted = OM.sortOrders(orders.filter(function (o) { return o.status !== 'done'; }));
+    var active = orders.filter(function (o) { return o.status !== 'done'; });
     var counts = { received: 0, pulling: 0, ready: 0, invoiced: 0, done: 0 };
     var pullCount = 0;
     orders.forEach(function (o) { counts[o.status]++; if (o.nowPulling) pullCount++; });
-    document.getElementById('ct').textContent = sorted.length;
-    ['pulling', 'received', 'ready'].forEach(function (k) { document.getElementById('c-' + k).textContent = counts[k]; });
+    document.getElementById('ct').textContent = active.length;
+    document.getElementById('c-pulling').textContent = counts.pulling;
+    document.getElementById('c-received').textContent = counts.received;
+    document.getElementById('c-ready').textContent = counts.ready + counts.invoiced;
     document.getElementById('pullcount').textContent = pullCount;
 
+    var sorted = OM.sortOrders(active.filter(matchesFilter));
     var board = document.getElementById('board');
     board.innerHTML = '';
     if (!sorted.length) {
-      var em = el('div', 'empty'); em.appendChild(el('div', 'ei', '📋')); em.appendChild(el('h3', null, 'No active orders'));
+      var em = el('div', 'empty'); em.appendChild(el('div', 'ei', '📋'));
+      em.appendChild(el('h3', null, filter === 'all' ? 'No active orders' : 'Nothing here right now'));
       board.appendChild(em); return;
     }
     sorted.forEach(function (o) { board.appendChild(card(o)); });
@@ -62,16 +75,20 @@
   function card(o) {
     var c = el('div', 'ctl-card ' + o.status + (o.nowPulling ? ' pull-on' : ''));
 
-    // ── identity: customer, order#, derived status, arrival, live pull timer ──
+    // ── identity: customer, status, arrival, live timers ──
     var idc = el('div', 'cc-id');
     idc.appendChild(el('div', 'cc-name', o.customer || '—'));
     var meta = el('div', 'cc-meta');
-    if (o.id) meta.appendChild(el('span', 'cc-oid', o.id));
     meta.appendChild(statusPill(o.status));
+    if (o.id) meta.appendChild(el('span', 'cc-oid', o.id));
     if (o.checkedInAt) meta.appendChild(el('span', 'cc-arr', '✓ here ' + OM.fmtTime(o.checkedInAt)));
     if (o.status === 'pulling' && o.t.pulling) {
       var stale = OM.pullElapsedMs(o) > cfg.stalePullMin * 60000;
       meta.appendChild(el('span', 'cc-elapsed' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o))));
+    }
+    var readyMs = OM.readyElapsedMs(o);
+    if (readyMs > 60000) {
+      meta.appendChild(el('span', 'cc-elapsed' + (readyMs > cfg.staleReadyMin * 60000 ? ' warn' : ''), '✓ ready ' + OM.fmtDuration(readyMs)));
     }
     idc.appendChild(meta);
     if (o.addons.length) {
@@ -81,12 +98,24 @@
     }
     c.appendChild(idc);
 
-    // ── editable columns ──
-    c.appendChild(fieldCell('Boxes', boxStepper(o)));
-    c.appendChild(fieldCell('Start', timeEditor(o, 'start', o.t.pulling)));
-    c.appendChild(fieldCell('End', timeEditor(o, 'end', o.t.ready)));
-    c.appendChild(fieldCell('Pickup', timeEditor(o, 'pickup', o.pickupAt)));
-    c.appendChild(fieldCell('Est. min', estStepper(o)));
+    // ── steppers ──
+    var boxCell = fieldCell('Boxes', boxStepper(o)); boxCell.className = 'cell boxes';
+    var estCell = fieldCell('Est. min', estStepper(o)); estCell.className = 'cell est';
+    // On narrow screens the grid collapses; group the steppers so they sit side by side.
+    var steppers = el('div', 'cc-steppers');
+    steppers.appendChild(boxCell);
+    steppers.appendChild(estCell);
+    c.appendChild(steppers);
+
+    // ── milestone time chips (corrections) ──
+    var times = el('div', 'cc-times');
+    times.appendChild(timeChip(o, 'start', 'Start', o.t.pulling));
+    times.appendChild(timeChip(o, 'end', 'End', o.t.ready));
+    times.appendChild(timeChip(o, 'pickup', 'Pickup', o.pickupAt));
+    c.appendChild(times);
+
+    // ── the one big next-step button ──
+    c.appendChild(actionCell(o));
     return c;
   }
 
@@ -108,30 +137,43 @@
     }, EST_MIN, EST_MAX, EST_STEP);
   }
 
-  // A milestone time: native time picker (great on iPad) + one-tap "Now" + clear.
-  function timeEditor(o, field, ms) {
-    var wrap = el('div', 'tedit');
+  /* Next step per stage — tapping stamps "now" and advances the status. */
+  function actionCell(o) {
+    var host = el('div', 'cc-act');
+    var def = o.status === 'received' ? { cls: 'start', txt: '▶ Start Pulling', field: 'start' }
+      : o.status === 'pulling' ? { cls: 'end', txt: '✓ Done Pulling', field: 'end' }
+      : { cls: 'pickup', txt: '📦 Picked Up', field: 'pickup' };
+    var b = el('button', 'act-btn ' + def.cls, def.txt);
+    b.addEventListener('click', function () {
+      b.disabled = true;                      // no double-stamps
+      write('setTime', { orderId: o.id, field: def.field, ms: OM.effectiveNow() });
+    });
+    host.appendChild(b);
+    return host;
+  }
+
+  /* A milestone time as a compact chip: tap the value to correct it,
+     ✕ clears (clearing Pickup un-does an accidental collection). */
+  function timeChip(o, field, label, ms) {
+    var chip = el('label', 'tchip' + (ms ? ' set' : ''));
+    chip.appendChild(el('span', 'tl', label));
     var input = document.createElement('input');
     input.type = 'time';
     input.value = OM.msToHHMM(ms);
-    if (ms) input.className = 'set';
     input.addEventListener('change', function () {
-      var newMs = OM.hhmmToMs(input.value, OM.effectiveNow());
-      write('setTime', { orderId: o.id, field: field, ms: newMs });
+      write('setTime', { orderId: o.id, field: field, ms: OM.hhmmToMs(input.value, OM.effectiveNow()) });
     });
-    wrap.appendChild(input);
-
-    var now = el('button', 'nowbtn', 'Now');
-    now.addEventListener('click', function () { write('setTime', { orderId: o.id, field: field, ms: OM.effectiveNow() }); });
-    wrap.appendChild(now);
-
+    chip.appendChild(input);
     if (ms) {
-      var clr = el('button', 'clrbtn', '✕');
-      clr.title = 'Clear ' + field + ' time';
-      clr.addEventListener('click', function () { write('setTime', { orderId: o.id, field: field, ms: null }); });
-      wrap.appendChild(clr);
+      var clr = el('button', 'tclr', '✕');
+      clr.title = 'Clear ' + label + ' time';
+      clr.addEventListener('click', function (e) {
+        e.preventDefault();
+        write('setTime', { orderId: o.id, field: field, ms: null });
+      });
+      chip.appendChild(clr);
     }
-    return wrap;
+    return chip;
   }
 
   function stepper(val, cls, onChange, min, max, step) {
@@ -155,12 +197,20 @@
   }, 1000);
 
   function start() {
+    document.querySelectorAll('.chip[data-f]').forEach(function (chipEl) {
+      chipEl.addEventListener('click', function () {
+        filter = chipEl.getAttribute('data-f');
+        document.querySelectorAll('.chip[data-f]').forEach(function (x) { x.classList.toggle('on', x === chipEl); });
+        render();
+      });
+    });
+
     poller = OM.startPolling({
       view: 'warehouse',
       refresh: cfg.refreshInteractive,
       onData: function (res) {
         setLive('', 'LIVE');
-        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now()) +
+        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(OM.effectiveNow()) +
           (res.source === 'csv' ? ' · sheet feed (writes still live)' : '');
         applySnapshot(res);
       },

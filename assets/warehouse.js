@@ -122,7 +122,15 @@
       hd.appendChild(el('span', 'ct', String(list.length)));
       grp.appendChild(hd);
       var cards = el('div', 'cards');
-      list.forEach(function (o) { cards.appendChild(card(o)); });
+      // Done is history — cap it so active work keeps the screen.
+      var visible = g.key === 'done' ? list.slice(-4) : list;
+      visible.forEach(function (o) { cards.appendChild(card(o)); });
+      if (g.key === 'done' && list.length > visible.length) {
+        var more = el('div', 'card done');
+        more.style.display = 'flex'; more.style.alignItems = 'center'; more.style.justifyContent = 'center';
+        more.appendChild(el('div', 'oid', '+ ' + (list.length - visible.length) + ' more collected today — see Analytics'));
+        cards.appendChild(more);
+      }
       grp.appendChild(cards);
       board.appendChild(grp);
     });
@@ -166,7 +174,7 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+        'Updated ' + OM.fmtTime(OM.effectiveNow()) +
         (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },

@@ -49,6 +49,52 @@
   function toInt(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
   function pad(n) { return String(n).padStart(2, '0'); }
 
+  /* ── Fleet timezone (CST/CDT by default) ─────────────────── */
+  /* Everything the screens show — clock, timestamps, ETAs, time pickers —
+     renders in this zone via Intl, so a TV with a mis-set clock/timezone
+     still shows the operation's real local time. */
+  var TZ = (global.OM_CONFIG && global.OM_CONFIG.TIMEZONE) || 'America/Chicago';
+  var _tzOk = true, _partsFmt = null;
+  try { new Intl.DateTimeFormat('en-US', { timeZone: TZ }); } catch (e) { _tzOk = false; }
+
+  /* Wall-clock parts { y, mo(1-12), d, h(0-23), mi, s, wd } of an instant in TZ. */
+  function tzParts(ms) {
+    var d = new Date(ms);
+    if (!_tzOk) {
+      return { y: d.getFullYear(), mo: d.getMonth() + 1, d: d.getDate(),
+        h: d.getHours(), mi: d.getMinutes(), s: d.getSeconds(),
+        wd: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] };
+    }
+    _partsFmt = _partsFmt || new Intl.DateTimeFormat('en-US', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23', weekday: 'short',
+    });
+    var out = {};
+    _partsFmt.formatToParts(d).forEach(function (p) {
+      if (p.type === 'year') out.y = +p.value;
+      else if (p.type === 'month') out.mo = +p.value;
+      else if (p.type === 'day') out.d = +p.value;
+      else if (p.type === 'hour') out.h = +p.value % 24;
+      else if (p.type === 'minute') out.mi = +p.value;
+      else if (p.type === 'second') out.s = +p.value;
+      else if (p.type === 'weekday') out.wd = p.value;
+    });
+    return out;
+  }
+
+  /* TZ offset (wall minus UTC) at an instant, and wall-clock → epoch ms. */
+  function wallOffset(ms) {
+    var p = tzParts(ms);
+    return Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s) - Math.floor(ms / 1000) * 1000;
+  }
+  function wallToEpoch(y, mo, d, h, mi, s) {
+    if (!_tzOk) return new Date(y, mo - 1, d, h, mi, s || 0).getTime();
+    var guess = Date.UTC(y, mo - 1, d, h, mi, s || 0);
+    var t = guess - wallOffset(guess);
+    return guess - wallOffset(t);      // second pass settles DST boundaries
+  }
+
   /* "7m", "1h 04m" from a millisecond duration */
   function fmtDuration(ms) {
     if (!ms || ms < 0) return '0m';
@@ -57,41 +103,40 @@
     return h > 0 ? h + 'h ' + pad(m) + 'm' : m + 'm';
   }
 
-  /* Date / time helpers — "23/06/2026 | 9:32 am" */
+  /* Date / time helpers — "23/06/2026 | 9:32 am" (fleet timezone) */
   function fmtTime(ms) {
     if (!ms) return '';
-    var d = new Date(ms), h = d.getHours(), m = d.getMinutes();
-    var ap = h >= 12 ? 'pm' : 'am';
-    var h12 = h % 12 || 12;
-    return h12 + ':' + pad(m) + ' ' + ap;
+    var p = tzParts(ms);
+    var ap = p.h >= 12 ? 'pm' : 'am';
+    var h12 = p.h % 12 || 12;
+    return h12 + ':' + pad(p.mi) + ' ' + ap;
   }
   function fmtDate(ms) {
     if (!ms) return '';
-    var d = new Date(ms);
-    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+    var p = tzParts(ms);
+    return pad(p.d) + '/' + pad(p.mo) + '/' + p.y;
   }
   function fmtDateTime(ms) {
     if (!ms) return '';
     return fmtDate(ms) + ' | ' + fmtTime(ms);
   }
 
-  /* "HH:MM" (24h) — for prefilling an <input type="time">. */
+  /* "HH:MM" (24h, fleet TZ) — for prefilling an <input type="time">. */
   function msToHHMM(ms) {
     if (!ms) return '';
-    var d = new Date(ms);
-    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+    var p = tzParts(ms);
+    return pad(p.h) + ':' + pad(p.mi);
   }
-  /* Parse an <input type="time"> value ("HH:MM") onto the day of baseMs
-     (defaults to the server-corrected "today"), returning epoch ms or null. */
+  /* Parse an <input type="time"> value ("HH:MM") as fleet-TZ wall time on
+     the day of baseMs (default: server-corrected "today") → epoch ms. */
   function hhmmToMs(hhmm, baseMs) {
     if (!hhmm) return null;
     var parts = String(hhmm).split(':');
     if (parts.length < 2) return null;
     var h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
     if (isNaN(h) || isNaN(m)) return null;
-    var base = new Date(baseMs || effectiveNow());
-    base.setHours(h, m, 0, 0);
-    return base.getTime();
+    var b = tzParts(baseMs || effectiveNow());
+    return wallToEpoch(b.y, b.mo, b.d, h, m, 0);
   }
 
   /* ── Order normalization ─────────────────────────────────── */
@@ -161,12 +206,44 @@
   }
 
   /* ── ETA & pull-timer math (uses server clock to avoid TV drift) ─ */
-  /* skew = local - server, captured at fetch; effectiveNow() corrects it. */
-  var _skew = 0;
+  /* skew = local - server; effectiveNow() corrects it, so a TV whose own
+     clock is minutes off still shows accurate times, ETAs and timers.
+     Two sync sources, best first:
+       1. same-origin HTTP Date header (Vercel edge time, refreshed every
+          10 min — works even when the Apps Script is down)
+       2. the Apps Script serverNow captured on every fetch            */
+  var _skew = 0, _httpSyncOk = false;
   function setServerNow(serverNow) {
+    if (_httpSyncOk) return;                       // HTTP sync is steadier
     if (serverNow) _skew = Date.now() - serverNow;
   }
   function effectiveNow() { return Date.now() - _skew; }
+
+  function syncClockHttp() {
+    if (typeof location === 'undefined' || location.protocol.indexOf('http') !== 0) {
+      return Promise.resolve(false);
+    }
+    var t0 = Date.now();
+    // A tiny same-origin asset: the response's Date header IS the time API.
+    return fetchWithTimeout(location.origin + '/assets/env.js?clock=' + t0, 8000, { cache: 'no-store' })
+      .then(function (r) {
+        var hd = r.headers.get('date');
+        var server = hd ? Date.parse(hd) : NaN;
+        var rtt = Date.now() - t0;
+        if (!server || isNaN(server) || rtt > 3000) return false;  // untrustworthy sample
+        _skew = (t0 + rtt / 2) - (server + 500);   // Date header is second-truncated
+        _httpSyncOk = true;
+        return true;
+      })
+      .catch(function () { return false; });
+  }
+  var _clockSyncStarted = false;
+  function startClockSync() {
+    if (_clockSyncStarted) return;
+    _clockSyncStarted = true;
+    syncClockHttp();
+    setInterval(syncClockHttp, 10 * 60000);
+  }
 
   /* Remaining wait seconds for an order (>=0), or null if not applicable. */
   function etaSeconds(o) {
@@ -291,8 +368,9 @@
       var ap = (m[7] || '').toLowerCase();
       if (ap === 'pm' && h < 12) h += 12;
       if (ap === 'am' && h === 12) h = 0;
-      var d = new Date(y, mon - 1, day, h, mi, se);
-      return isNaN(d.getTime()) ? 0 : d.getTime();
+      // The sheet displays wall-clock time in its own (fleet) timezone.
+      var t2 = wallToEpoch(y, mon, day, h, mi, se);
+      return isNaN(t2) ? 0 : t2;
     }
     var t = Date.parse(s);
     return isNaN(t) ? 0 : t;
@@ -475,6 +553,26 @@
     return { reload: load, stop: function () { clearInterval(tickTimer); } };
   }
 
+  /* ── Auto-rotating pagination for TV lists ───────────────── */
+  /* Shows pageSize rows at a time and advances every rotateSec ticks
+     (call tick() once a second). Resets to page 1 whenever the set of
+     rows changes, so the display never strands on a stale page. */
+  function makeRotator(pageSize, rotateSec) {
+    var page = 0, ticks = 0, sig = '';
+    return {
+      tick: function () { ticks++; if (ticks >= rotateSec) { ticks = 0; page++; } },
+      view: function (list, idFn) {
+        var ids = list.map(idFn || function (o) { return o.id || o.customer; }).join('|');
+        if (ids !== sig) { sig = ids; page = 0; ticks = 0; }
+        var pages = Math.max(1, Math.ceil(list.length / pageSize));
+        if (page >= pages) page = 0;
+        var start = page * pageSize;
+        var slice = list.slice(start, start + pageSize);
+        return { slice: slice, page: page, pages: pages, start: start, count: slice.length, total: list.length };
+      },
+    };
+  }
+
   /* ── Kiosk hardening (TVs/iPads that run for days) ───────── */
   /* • Screen wake-lock so a TV browser never dims/sleeps mid-service.
      • One reload during the quiet 3am hour (only after 6h+ uptime) so a
@@ -489,7 +587,7 @@
     lock();
     document.addEventListener('visibilitychange', lock);
     setInterval(function () {
-      if (Date.now() - _bootTs > 6 * 3600000 && new Date().getHours() === 3) {
+      if (Date.now() - _bootTs > 6 * 3600000 && tzParts(effectiveNow()).h === 3) {
         location.reload();
       }
     }, 60000);
@@ -512,15 +610,18 @@
   }
 
   /* ── Header clock (shared) ───────────────────────────────── */
-  /* dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); anything else → "Thu, Jun 25". */
+  /* Fleet-TZ + server-synced, so every screen agrees on the time.
+     dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); else "Thu, Jun 25". */
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function startClock(clockEl, dateEl, dateStyle) {
+    startClockSync();
     function t() {
-      var n = new Date();
-      if (clockEl) clockEl.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
+      var p = tzParts(effectiveNow());
+      if (clockEl) clockEl.textContent = pad(p.h) + ':' + pad(p.mi);
       if (dateEl) {
         dateEl.textContent = dateStyle === 'dmy'
-          ? pad(n.getDate()) + '/' + pad(n.getMonth() + 1) + '/' + String(n.getFullYear()).slice(-2)
-          : n.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          ? pad(p.d) + '/' + pad(p.mo) + '/' + String(p.y).slice(-2)
+          : (p.wd ? p.wd + ', ' : '') + MONTHS[p.mo - 1] + ' ' + p.d;
       }
     }
     setInterval(t, 1000); t();
@@ -538,6 +639,8 @@
     startPolling: startPolling,
     startClock: startClock,
     kiosk: kiosk,
+    makeRotator: makeRotator,
+    tzParts: tzParts,
     effectiveNow: effectiveNow,
     etaSeconds: etaSeconds,
     fmtEta: fmtEta,

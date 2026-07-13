@@ -70,7 +70,7 @@
     orders.forEach(function (o) {
       var t = o.t.done || o.t.ready;
       if (!t) return;
-      var h = new Date(t).getHours();
+      var h = OM.tzParts(t).h;      // bucket by fleet-TZ hour, not TV-local
       buckets[h] = (buckets[h] || 0) + 1;
     });
     var hours = Object.keys(buckets).map(Number).sort(function (a, b) { return a - b; });
