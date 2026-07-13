@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#E8711A">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23E8711A'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='26' font-weight='900' fill='%23fff' text-anchor='middle'%3EOM%3C/text%3E%3C/svg%3E">
   <title>Pickup Window — OM Produce</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/tokens.css">
   <link rel="stylesheet" href="assets/base.css">
@@ -33,7 +37,8 @@
     .inv-row .meta .oid { font-family: monospace; }
     .inv-row .meta .bx { font-family: var(--f-head); font-weight: 800; color: var(--orange); font-size: 15px; }
     .inv-row .addon { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; font-size: 11px; color: var(--text); }
-    .inv-row .wait { margin-left: auto; }
+    .inv-row .age { margin-left: auto; font-family: var(--f-head); font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .inv-row .age.warn { color: var(--red); }
 
     .nx-row { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--amber); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 8px; }
     .nx-row .nm { font-family: var(--f-head); font-size: 22px; font-weight: 800; }

@@ -5,6 +5,7 @@
 (function () {
   'use strict';
   var SVGNS = 'http://www.w3.org/2000/svg';
+  OM.kiosk();
 
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
   function svg(tag, attrs, txt) {
@@ -129,6 +130,10 @@
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
       document.getElementById('lpill').className = 'live-pill';
       document.getElementById('ltxt').textContent = 'LIVE';
+      if (res.source === 'csv') {
+        document.getElementById('an-note').textContent =
+          'Analytics are computed from today’s sheet via the published feed (the LOG history needs the Web App connection).';
+      }
       render(res.orders);
     },
     onError: function () {

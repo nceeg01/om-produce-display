@@ -7,6 +7,7 @@
    Recognised env vars (all optional — only non-empty ones override config.js):
      OM_API_TOKEN   → window.OM_ENV.TOKEN        (the Apps Script doGet/doPost key)
      OM_WEBAPP_URL  → window.OM_ENV.WEB_APP_URL  (override the baked URL, if ever needed)
+     OM_CSV_URL     → window.OM_ENV.CSV_URL      (override the baked published-CSV feed)
      OM_STAFF_PIN   → window.OM_ENV.DEFAULT_PIN  (override the baked staff PIN)
    ============================================================ */
 'use strict';
@@ -15,6 +16,7 @@ var path = require('path');
 
 var env = {};
 if (process.env.OM_WEBAPP_URL) env.WEB_APP_URL = process.env.OM_WEBAPP_URL;
+if (process.env.OM_CSV_URL) env.CSV_URL = process.env.OM_CSV_URL;
 if (process.env.OM_API_TOKEN) env.TOKEN = process.env.OM_API_TOKEN;
 if (process.env.OM_STAFF_PIN) env.DEFAULT_PIN = process.env.OM_STAFF_PIN;
 

@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#E8711A">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23E8711A'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='26' font-weight='900' fill='%23fff' text-anchor='middle'%3EOM%3C/text%3E%3C/svg%3E">
   <title>OM Produce — Display Setup</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/tokens.css">
   <link rel="stylesheet" href="assets/base.css">
@@ -27,6 +31,14 @@
     .sb-err { background: var(--red-l); border: 1px solid var(--red-m); color: var(--red); }
     .sdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .sdot-g { background: var(--olive); } .sdot-r { background: var(--red); }
+
+    .src-grid { display: grid; gap: 8px; margin-bottom: 16px; }
+    .src-row { display: flex; align-items: flex-start; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+    .src-row .sdot { margin-top: 5px; }
+    .src-name { font-size: 13px; font-weight: 600; }
+    .src-role { font-size: 11px; font-weight: 500; color: var(--muted2); margin-left: 6px; text-transform: none; letter-spacing: 0; }
+    .src-txt { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    label .opt { text-transform: none; font-weight: 400; color: var(--muted2); letter-spacing: 0; }
 
     label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 14px 0 7px; }
     input[type=text] { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 11px 14px; font-family: monospace; font-size: 13px; outline: none; transition: border-color .2s; }
@@ -110,32 +122,48 @@
       </a>
     </div>
 
-    <div class="sec-title">Data Connection</div>
+    <div class="sec-title">Data Connection — permanent, no setup needed</div>
     <div class="card">
       <div id="status-bar" class="status-bar sb-err">
         <div class="sdot sdot-r" id="sdot"></div>
-        <span id="status-txt">Not connected — paste the Web App URL + token below</span>
+        <span id="status-txt">Checking the baked-in connection…</span>
+      </div>
+      <div class="src-grid">
+        <div class="src-row" id="src-api">
+          <div class="sdot sdot-r" id="src-api-dot"></div>
+          <div><div class="src-name">Apps Script Web App <span class="src-role">primary · live read + write</span></div>
+          <div class="src-txt" id="src-api-txt">testing…</div></div>
+        </div>
+        <div class="src-row" id="src-csv">
+          <div class="sdot sdot-r" id="src-csv-dot"></div>
+          <div><div class="src-name">Published sheet (CSV) <span class="src-role">automatic fallback · read-only</span></div>
+          <div class="src-txt" id="src-csv-txt">testing…</div></div>
+        </div>
       </div>
       <div class="warn-box">
-        <strong>How this works:</strong> the screens read a private Google Sheet through a
-        Google <strong>Apps Script Web App</strong> (running as the TV/relay account). Paste that
-        deployment's <code>/exec</code> URL and the API token here. Setup steps are below.
+        <strong>Nothing to configure:</strong> both links are baked into the app
+        (<code>assets/config.js</code>), so every TV / iPad connects on load. If the Web App read
+        ever fails (missing token, redeploy), screens switch to the published sheet feed by
+        themselves. The fields below only <em>override</em> the baked values on <em>this device</em> —
+        leave them empty in normal use.
       </div>
-      <label>Apps Script Web App URL</label>
+      <label>Apps Script Web App URL <span class="opt">(baked in — override only if you redeploy the script)</span></label>
       <input type="text" id="url" placeholder="https://script.google.com/macros/s/…/exec">
-      <label>API Token</label>
-      <input type="text" id="token" placeholder="the API_TOKEN you set in Script Properties">
-      <label>Staff PIN <span style="text-transform:none;font-weight:400;color:var(--muted2)">(locks the Control &amp; Check-in pages — set once)</span></label>
+      <label>Published CSV link <span class="opt">(baked in — File → Share → Publish to web → ORDERS tab → CSV)</span></label>
+      <input type="text" id="csv" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv">
+      <label>API Token <span class="opt">(optional — unlocks live Web-App reads if the script enforces a token; set OM_API_TOKEN in Vercel to bake it fleet-wide)</span></label>
+      <input type="text" id="token" placeholder="the API_TOKEN from the Apps Script's Script Properties">
+      <label>Staff PIN <span class="opt">(Control &amp; Check-in pages — PIN 9020 is baked in; set only to change it)</span></label>
       <input type="text" id="pin" placeholder="4+ digits, e.g. 4827">
       <div class="msg" id="msg"></div>
       <div class="btn-row">
         <button class="btn-p" onclick="saveTest()">Save &amp; Test</button>
         <button class="btn-s" onclick="doPreview()">Preview Data</button>
         <button class="btn-s" onclick="setStaffPinFlow()">Set PIN</button>
-        <button class="btn-d" onclick="clearCfg()">Clear</button>
+        <button class="btn-d" onclick="clearCfg()">Reset to Baked Defaults</button>
       </div>
       <div id="prev-wrap">
-        <div class="prev-label">Live Preview — Warehouse View</div>
+        <div class="prev-label" id="prev-label">Live Preview — Warehouse View</div>
         <div class="tbl-scroll"><table><thead><tr id="prv-hdr"></tr></thead><tbody id="prv-bdy"></tbody></table></div>
       </div>
     </div>
@@ -177,7 +205,8 @@
         <li>Add an <strong>installable “On edit” trigger</strong> for <code>onEditTrigger</code> (backs up manual sheet edits).</li>
         <li><strong>Deploy → New deployment → Web app</strong>: execute as <strong>Me</strong> (an editor account), access “Anyone with the link”. Copy the <code>/exec</code> URL. <em>(After editing the script later, use Manage deployments → New version so the URL stays the same.)</em></li>
         <li>Share the sheet with <strong>op1 &amp; op3 as Editors, op2 as Viewer</strong>, and <strong>turn OFF “anyone with the link”.</strong></li>
-        <li>Paste the <code>/exec</code> URL + token above, click <strong>Save &amp; Test</strong>. Then set a <strong>Staff PIN</strong> (locks the Control &amp; Check-in pages).</li>
+        <li><strong>File → Share → Publish to web</strong> → pick the <strong>ORDERS</strong> tab → <strong>CSV</strong> → Publish. That link is the automatic, no-token fallback feed the screens use whenever the Web App read fails.</li>
+        <li><strong>Done — both links are already baked into this app</strong> (<code>assets/config.js</code>), so every TV / iPad connects on load with nothing to paste. Only if you ever create a <em>new</em> Web App deployment or CSV link do you update <code>config.js</code> (fleet-wide) or paste it above (this device only). Optional: set <code>OM_API_TOKEN</code> in Vercel so live Web-App reads work when the script enforces a token.</li>
         <li>Open the screens: <strong>Control</strong> on the warehouse iPad, <strong>Check-in</strong> at the sales window, and the TV pages on each display.</li>
       </ol>
     </div>

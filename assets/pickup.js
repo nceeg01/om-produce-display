@@ -11,6 +11,7 @@
   var ROTATE_SEC = cfg.tvRotateSec || 5;     // seconds before the next page
 
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'), 'dmy'); // hh:mm + dd/mm/yy
+  OM.kiosk();
 
   var lastOrders = [], prevName = '';
   var page = 0, queueIds = '', secTick = 0;
@@ -25,10 +26,15 @@
   function isReady(o) { return o.status === 'ready' || o.status === 'invoiced'; }
 
   // Per-line status/ETA shown on the same row as the customer.
+  // "~7 min" reads as "Ready in ~7 min"; "Any moment" stands on its own.
+  function etaLabel(e, fallback) {
+    if (!e) return fallback;
+    return e.charAt(0) === '~' ? 'Ready in ' + e : e;
+  }
   function lineInfo(o) {
     if (isReady(o)) return { cls: 'ready', txt: 'Ready ✓' };
-    if (o.status === 'pulling') { var e = OM.fmtEta(o); return { cls: 'pulling', txt: e ? 'Ready in ' + e : 'Being prepared' }; }
-    return { cls: 'received', txt: 'In queue' };
+    if (o.status === 'pulling') return { cls: 'pulling', txt: etaLabel(OM.fmtEta(o), 'Being prepared') };
+    return { cls: 'received', txt: etaLabel(OM.fmtEta(o), 'In queue') };  // queued estimates show too
   }
 
   function renderServing(o) {
@@ -140,13 +146,14 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+        (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },
     onError: function (err) {
       setLive('err', 'Error');
       document.getElementById('last-upd').textContent = (err && err.message) || 'Load failed — retrying';
-      if (!cfg.url) document.getElementById('ov').style.display = 'flex';
+      if (!cfg.url && !cfg.csvUrl) document.getElementById('ov').style.display = 'flex';
     },
     onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
   });

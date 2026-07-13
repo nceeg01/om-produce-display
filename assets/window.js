@@ -7,6 +7,7 @@
   'use strict';
   var cfg = getConfig();
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
+  OM.kiosk();
   var lastOrders = [];
 
   function setLive(state, txt) {
@@ -27,6 +28,12 @@
     o.addons.forEach(function (a) { meta.appendChild(el('span', 'addon', a)); });
     info.appendChild(meta);
     r.appendChild(info);
+    // How long it's been sitting ready — invoice the oldest first.
+    var readyMs = OM.readyElapsedMs(o);
+    if (readyMs > 60000) {
+      var age = el('div', 'age' + (readyMs > cfg.staleReadyMin * 60000 ? ' warn' : ''), OM.fmtDuration(readyMs) + ' waiting');
+      r.appendChild(age);
+    }
     r.appendChild(statusPill(o.status));
     return r;
   }
@@ -36,7 +43,7 @@
     r.appendChild(el('div', 'nm', o.customer || '—'));
     if (o.boxes > 0) r.appendChild(el('span', 'bx', '📦 ' + o.boxes));
     var eta = OM.fmtEta(o);
-    r.appendChild(el('div', 'eta', eta ? 'Ready in ' + eta : 'Pulling'));
+    r.appendChild(el('div', 'eta', !eta ? 'Pulling' : (eta.charAt(0) === '~' ? 'Ready in ' + eta : eta)));
     return r;
   }
 
@@ -88,13 +95,14 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+        (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },
     onError: function (err) {
       setLive('err', 'ERR');
       document.getElementById('last-upd').textContent = (err && err.message) || 'Load failed — retrying';
-      if (!cfg.url) document.getElementById('ov').style.display = 'flex';
+      if (!cfg.url && !cfg.csvUrl) document.getElementById('ov').style.display = 'flex';
     },
     onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
   });

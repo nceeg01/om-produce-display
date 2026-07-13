@@ -10,6 +10,7 @@
   var filter = '';
 
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
+  OM.kiosk();
   OMUI.pinGate(start);
 
   function setLive(state, txt) {
@@ -113,14 +114,21 @@
   }
 
   function quickAdd() {
+    var btn = document.getElementById('qa-go');
+    if (btn.disabled) return;                       // a double-tap must not add twice
     var name = document.getElementById('qa-name').value.trim();
     if (!name) { OMUI.toast('Enter a customer name', 'err'); return; }
     var addon = document.getElementById('qa-addon').value.trim();
-    document.getElementById('qa-name').value = '';
-    document.getElementById('qa-addon').value = '';
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+    function done() { btn.disabled = false; btn.textContent = '+ Add & Check In'; }
     OM.post('quickAdd', { customer: name, addons: addon ? [addon] : [] })
-      .then(function (res) { applySnapshot(res); OMUI.toast(name + ' added', 'ok'); })
-      .catch(function (err) { OMUI.handleWriteError(err, function () { poller && poller.reload(); }); });
+      .then(function (res) {
+        document.getElementById('qa-name').value = '';
+        document.getElementById('qa-addon').value = '';
+        applySnapshot(res); OMUI.toast(name + ' added', 'ok'); done();
+      })
+      .catch(function (err) { done(); OMUI.handleWriteError(err, function () { poller && poller.reload(); }); });
   }
 
   function start() {
@@ -131,7 +139,12 @@
     poller = OM.startPolling({
       view: 'warehouse',
       refresh: cfg.refreshInteractive,
-      onData: function (res) { setLive('', 'LIVE'); document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now()); applySnapshot(res); },
+      onData: function (res) {
+        setLive('', 'LIVE');
+        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now()) +
+          (res.source === 'csv' ? ' · sheet feed (writes still live)' : '');
+        applySnapshot(res);
+      },
       onError: function (err) { setLive('err', 'ERR'); document.getElementById('last-upd').textContent = (err && err.message) || 'Sync failed'; },
       onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
     });

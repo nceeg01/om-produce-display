@@ -1,6 +1,8 @@
 /* ============================================================
    OM Produce — Admin / setup page logic
-   Saves the Web-App URL + token, tests the connection, previews.
+   The connection is permanent (baked into config.js). This page
+   health-checks both data sources, previews live data, and lets you
+   set a device-level override or the staff PIN when ever needed.
    ============================================================ */
 (function () {
   'use strict';
@@ -13,52 +15,74 @@
     $('sdot').className = 'sdot ' + (ok ? 'sdot-g' : 'sdot-r');
     $('status-txt').textContent = txt;
   }
+  function setSrc(which, ok, txt) {
+    $('src-' + which + '-dot').className = 'sdot ' + (ok ? 'sdot-g' : 'sdot-r');
+    $('src-' + which + '-txt').textContent = txt;
+  }
 
   function init() {
     var cfg = getConfig();
-    if (cfg.url) $('url').value = cfg.url;
+    $('url').value = cfg.url || '';
+    $('csv').value = cfg.csvUrl || '';
     if (cfg.token) $('token').value = cfg.token;
-    if (cfg.url) setStatus(true, 'Configured — using saved connection');
+    runTests();
   }
 
+  /* Probe both sources and paint the per-source + overall status. */
+  function runTests() {
+    setSrc('api', false, 'testing…');
+    setSrc('csv', false, 'testing…');
+    return OM.testSources().then(function (r) {
+      setSrc('api', r.api.ok, r.api.ok
+        ? '✓ Connected — ' + r.api.count + ' orders (live reads + writes)'
+        : '✗ ' + (r.api.error || 'Failed') + ' — screens fall back to the sheet feed; writes need this fixed (usually the API token)');
+      setSrc('csv', r.csv.ok, r.csv.ok
+        ? '✓ Connected — ' + r.csv.count + ' rows (fallback ready, ~1 min behind)'
+        : '✗ ' + (r.csv.error || 'Failed') + ' — re-publish the ORDERS tab as CSV if this persists');
+      if (r.api.ok) setStatus(true, 'Connected — live Web App feed. Displays and staff pages are fully operational.');
+      else if (r.csv.ok) setStatus(true, 'Connected via the published sheet feed — displays work; writes from Control/Check-in need the Web App (token).');
+      else setStatus(false, 'No data source reachable — check the links below and your network.');
+      return r;
+    });
+  }
+
+  /* Save non-default field values as explicit device overrides.
+     Empty (or unchanged-from-baked) fields clear the override. */
   function persist() {
-    try {
-      localStorage.setItem(C.LS_URL, $('url').value.trim());
-      localStorage.setItem(C.LS_TOKEN, $('token').value.trim());
-    } catch (e) {}
-  }
-
-  function fetchPreview() {
-    persist();
-    return OM.fetchData('warehouse');
+    function save(key, val, baked) {
+      try {
+        if (val && val !== (baked || '').trim()) localStorage.setItem(key, val);
+        else localStorage.removeItem(key);
+      } catch (e) {}
+    }
+    save(C.OVR_URL, $('url').value.trim(), C.WEB_APP_URL);
+    save(C.OVR_CSV, $('csv').value.trim(), C.CSV_URL);
+    save(C.OVR_TOKEN, $('token').value.trim(), C.TOKEN);
   }
 
   window.saveTest = function () {
-    setMsg('Testing…', '');
-    fetchPreview().then(function (res) {
-      if (res.demo) {
-        setMsg('No URL set — showing DEMO data. Paste a Web App URL to go live.', 'err');
-        setStatus(false, 'Demo mode (not connected)');
-        showPreview(res.orders);
-        return;
+    persist();
+    setMsg('Testing both sources…', '');
+    runTests().then(function (r) {
+      if (r.api.ok || r.csv.ok) {
+        setMsg('✓ Saved. Every screen on this device uses this connection now.', 'ok');
+        return OM.fetchData('warehouse').then(function (res) { showPreview(res); });
       }
-      var time = new Date().toLocaleTimeString();
-      setStatus(true, 'Connected — last update ' + time);
-      setMsg('✓ Connected. Found ' + res.orders.length + ' orders. Screens will use this connection.', 'ok');
-      showPreview(res.orders);
+      setMsg('Saved, but neither source answered — double-check the links.', 'err');
     }).catch(function (err) {
-      setStatus(false, 'Connection failed');
-      setMsg('Connection failed: ' + (err && err.message || 'check the URL and token, and that the Web App is deployed for “Anyone”.'), 'err');
+      setMsg('Test failed: ' + ((err && err.message) || err), 'err');
     });
   };
 
   window.doPreview = function () {
     setMsg('Loading…', '');
-    fetchPreview().then(function (res) {
-      setMsg('Loaded ' + res.orders.length + ' orders' + (res.demo ? ' (demo)' : '') + '.', 'ok');
-      showPreview(res.orders);
+    persist();
+    OM.fetchData('warehouse').then(function (res) {
+      var src = res.demo ? 'demo data' : (res.source === 'csv' ? 'published sheet feed' : 'live Web App');
+      setMsg('Loaded ' + res.orders.length + ' orders from the ' + src + '.', 'ok');
+      showPreview(res);
     }).catch(function (err) {
-      setMsg(err && err.message || 'Could not load.', 'err');
+      setMsg((err && err.message) || 'Could not load.', 'err');
     });
   };
 
@@ -68,7 +92,7 @@
     persist();
     saveStaffPin(pin);                       // remember on this device
     var cfg = getConfig();
-    if (!cfg.url) { setMsg('PIN saved on this device (demo mode — no server).', 'ok'); $('pin').value = ''; return; }
+    if (!cfg.url) { setMsg('PIN saved on this device.', 'ok'); $('pin').value = ''; return; }
     setMsg('Setting PIN…', '');
     OM.post('setPin', { pin: pin })
       .then(function () { setMsg('✓ PIN set on the server and saved on this device.', 'ok'); $('pin').value = ''; })
@@ -80,16 +104,21 @@
   };
 
   window.clearCfg = function () {
-    try { localStorage.removeItem(C.LS_URL); localStorage.removeItem(C.LS_TOKEN); } catch (e) {}
+    try {
+      [C.OVR_URL, C.OVR_CSV, C.OVR_TOKEN, C.LS_URL, C.LS_CSV, C.LS_TOKEN]
+        .forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
     clearStaffPin();
-    $('url').value = ''; $('token').value = ''; $('pin').value = '';
+    $('pin').value = '';
     $('prev-wrap').style.display = 'none';
-    setStatus(false, 'Not connected');
-    setMsg('Cleared.', '');
+    init();
+    setMsg('Device overrides cleared — back on the baked-in fleet connection.', 'ok');
   };
 
-  function showPreview(orders) {
+  function showPreview(res) {
     $('prev-wrap').style.display = 'block';
+    $('prev-label').textContent = 'Live Preview — Warehouse View' +
+      (res.demo ? ' (demo)' : res.source === 'csv' ? ' (sheet feed)' : ' (live Web App)');
     var hdr = $('prv-hdr');
     hdr.innerHTML = '';
     ['Order', 'Customer', 'Status', 'Boxes', 'Addons', 'Wait'].forEach(function (h) {
@@ -97,7 +126,7 @@
     });
     var body = $('prv-bdy');
     body.innerHTML = '';
-    orders.slice(0, 12).forEach(function (o) {
+    res.orders.slice(0, 12).forEach(function (o) {
       var tr = document.createElement('tr');
       cell(tr, o.id || '—');
       cell(tr, o.customer || '—');

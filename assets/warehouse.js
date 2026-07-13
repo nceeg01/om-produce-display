@@ -5,6 +5,7 @@
   'use strict';
   var cfg = getConfig();
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
+  OM.kiosk();
 
   // Display order of stage groups (active work first).
   var GROUPS = [
@@ -67,6 +68,12 @@
     if (o.status === 'pulling') {
       var t = el('div', 'timer' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o)));
       right.appendChild(t);
+    }
+    // Aging on READY orders — spot pallets nobody has collected.
+    var readyMs = OM.readyElapsedMs(o);
+    if (readyMs > 0) {
+      var late = readyMs > cfg.staleReadyMin * 60000;
+      right.appendChild(el('div', 'timer' + (late ? ' warn' : ''), '✓ ready ' + OM.fmtDuration(readyMs)));
     }
     var eta = OM.fmtEta(o);
     if (eta && o.status !== 'ready' && o.status !== 'invoiced') right.appendChild(el('div', 'eta', eta));
@@ -159,13 +166,14 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+        (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },
     onError: function (err) {
       setLive('err', 'ERR');
       document.getElementById('last-upd').textContent = (err && err.message) || 'Load failed — retrying';
-      if (!cfg.url) document.getElementById('ov').style.display = 'flex';
+      if (!cfg.url && !cfg.csvUrl) document.getElementById('ov').style.display = 'flex';
     },
     onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
   });

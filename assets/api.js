@@ -3,11 +3,11 @@
    ------------------------------------------------------------
    • STATUS         canonical 5-stage vocabulary (single source)
    • normStatus()   tolerant text → canonical key
-   • fetchData()    calls the Apps Script Web App (JSON, JSONP fallback)
-   • startPolling() 30s refresh loop with countdown
+   • fetchData()    Apps Script Web App first (JSON, JSONP fallback),
+                    then the published-sheet CSV — screens stay live
+                    even if the Web App read fails (no token needed)
+   • startPolling() refresh loop with countdown
    • helpers        clock, time formatting, ETA / pull-timer math
-   The raw Google Sheet stays private; this only consumes the
-   token-gated JSON projection returned by the Web App.
    ============================================================ */
 (function (global) {
   'use strict';
@@ -192,6 +192,12 @@
     return effectiveNow() - o.t.pulling;
   }
 
+  /* How long a READY/INVOICED order has been waiting for its customer. */
+  function readyElapsedMs(o) {
+    if ((o.status !== 'ready' && o.status !== 'invoiced') || !o.t.ready) return 0;
+    return effectiveNow() - o.t.ready;
+  }
+
   /* ── Web App fetch (JSON first, JSONP fallback) ──────────── */
   function buildUrl(base, view, token, extra) {
     var sep = base.indexOf('?') >= 0 ? '&' : '?';
@@ -200,6 +206,15 @@
             '&_=' + Date.now();
     if (extra) q += '&' + extra;
     return base + sep + q;
+  }
+
+  /* fetch() with a hard timeout so a cold Apps Script can't hang a TV. */
+  function fetchWithTimeout(url, ms, opts) {
+    if (typeof AbortController === 'undefined') return fetch(url, opts);
+    var ctl = new AbortController();
+    var t = setTimeout(function () { ctl.abort(); }, ms);
+    return fetch(url, Object.assign({ signal: ctl.signal }, opts || {}))
+      .finally(function () { clearTimeout(t); });
   }
 
   function jsonp(url) {
@@ -212,52 +227,182 @@
       s.onerror = function () { if (!done) { cleanup(); reject(new Error('JSONP load failed')); } };
       s.src = url + '&callback=' + cb;
       document.head.appendChild(s);
-      setTimeout(function () { if (!done) { cleanup(); reject(new Error('JSONP timeout')); } }, 12000);
+      setTimeout(function () { if (!done) { cleanup(); reject(new Error('JSONP timeout')); } }, 9000);
     });
   }
 
-  /* Returns { orders:[…], serverNow, demo:false }.
-     In DEMO mode (no URL configured) returns sample data. */
-  function fetchData(view) {
-    var cfg = getConfig();
-    if (!cfg.url) {
-      var d = global.__OM_DEMO || (global.__OM_DEMO = (global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() }));
-      setServerNow(Date.now());
-      return Promise.resolve({ orders: d.orders.map(normOrder), serverNow: Date.now(), demo: true });
-    }
+  /* Read via the Apps Script Web App. JSONP is tried only after a
+     network/CORS failure — an API-level error (bad token…) is final and
+     is surfaced as-is instead of being masked by a pointless retry. */
+  function fetchAppsScript(view, cfg) {
     var url = buildUrl(cfg.url, view, cfg.token);
-
-    function handle(data) {
-      if (!data || data.ok === false) {
-        throw new Error((data && data.error) || 'API returned an error (check token).');
-      }
-      setServerNow(data.serverNow || data.now);
-      return {
-        orders: (data.orders || []).map(normOrder),
-        serverNow: data.serverNow || data.now || Date.now(),
-        demo: false,
-      };
-    }
-
-    return fetch(url, { method: 'GET' })
+    return fetchWithTimeout(url, 9000, { method: 'GET' })
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
-      .then(handle)
-      .catch(function () {
-        // CORS or network — fall back to JSONP (Apps Script friendly).
-        return jsonp(url).then(handle);
+      .catch(function () { return jsonp(url); })  // network path only
+      .then(function (data) {
+        if (!data || data.ok === false) {
+          throw new Error((data && data.error) || 'API returned an error (check token).');
+        }
+        setServerNow(data.serverNow || data.now);
+        return {
+          orders: (data.orders || []).map(normOrder),
+          serverNow: data.serverNow || data.now || Date.now(),
+          demo: false,
+          source: 'api',
+        };
       });
+  }
+
+  /* ── Published-sheet CSV fallback (public link, no token) ── */
+  /* Minimal RFC-4180 CSV parser (quotes, embedded commas/newlines). */
+  function parseCsv(text) {
+    var rows = [], row = [], cur = '', inQ = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+        else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === ',') { row.push(cur); cur = ''; }
+      else if (ch === '\n') { row.push(cur); cur = ''; rows.push(row); row = []; }
+      else if (ch !== '\r') cur += ch;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  /* The sheet displays timestamps as "dd/MM/yyyy | h:mm am/pm" (set by
+     ensureV2), and the published CSV exports that display text. Parse it —
+     plus epoch millis and ISO strings — into epoch ms (0 = blank). */
+  function parseSheetDate(v) {
+    if (v == null) return 0;
+    if (typeof v === 'number') return v > 1e11 ? v : 0;
+    var s = String(v).trim();
+    if (!s) return 0;
+    if (/^\d{12,}$/.test(s)) return Number(s);
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s*\|?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]m)?)?$/i);
+    if (m) {
+      var day = +m[1], mon = +m[2], y = +m[3];
+      if (y < 100) y += 2000;
+      var h = m[4] ? +m[4] : 0, mi = m[5] ? +m[5] : 0, se = m[6] ? +m[6] : 0;
+      var ap = (m[7] || '').toLowerCase();
+      if (ap === 'pm' && h < 12) h += 12;
+      if (ap === 'am' && h === 12) h = 0;
+      var d = new Date(y, mon - 1, day, h, mi, se);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    }
+    var t = Date.parse(s);
+    return isNaN(t) ? 0 : t;
+  }
+
+  var CSV_DATE_COLS = { created: 1, t_received: 1, t_pulling: 1, t_ready: 1,
+    t_invoiced: 1, t_done: 1, wait_set_at: 1, checkedinat: 1, pickupat: 1 };
+
+  /* Map a header cell to the raw-order key normOrder() understands. */
+  var CSV_KEY = {
+    orderid: 'id', customer: 'customer', status: 'status', boxes: 'boxes',
+    addon1: 'addon1', addon2: 'addon2', addon3: 'addon3',
+    waitmin: 'waitMin', notes: 'notes', created: 'created',
+    t_received: 't_received', t_pulling: 't_pulling', t_ready: 't_ready',
+    t_invoiced: 't_invoiced', t_done: 't_done', wait_set_at: 'waitSetAt',
+    queuepos: 'queuePos', nowpulling: 'nowPulling',
+    checkedinat: 'checkedInAt', pickupat: 'pickupAt',
+    // LOG-tab shape (if the published gid points at LOG)
+    date: 'date', summary: 'summary', pullmin: 'pullMin',
+    waittopullmin: 'waitToPullMin', cyclemin: 'cycleMin', donems: 't_done',
+  };
+
+  function csvToOrders(text, view) {
+    var rows = parseCsv(text);
+    if (!rows.length) return [];
+    var head = rows[0].map(function (h) { return String(h).trim().toLowerCase(); });
+    if (head.indexOf('customer') < 0) {
+      throw new Error('CSV feed has no Customer column — publish the ORDERS tab as CSV.');
+    }
+    var isLog = head.indexOf('summary') >= 0 && head.indexOf('status') < 0;
+    var out = [];
+    for (var i = 1; i < rows.length; i++) {
+      var raw = {};
+      for (var c = 0; c < head.length; c++) {
+        var key = CSV_KEY[head[c]];
+        if (!key) continue;
+        var val = rows[i][c] != null ? rows[i][c] : '';
+        if (CSV_DATE_COLS[head[c]] || (isLog && head[c] === 'donems')) val = parseSheetDate(val);
+        raw[key] = val;
+      }
+      if (!String(raw.customer || '').trim()) continue;
+      if (isLog) raw.status = 'Done';
+      var o = normOrder(raw);
+      if (view === 'customer' && o.status === 'done') continue; // mirror the Web App projection
+      out.push(o);
+    }
+    return out;
+  }
+
+  function fetchCsvData(view, cfg) {
+    var sep = cfg.csvUrl.indexOf('?') >= 0 ? '&' : '?';
+    return fetchWithTimeout(cfg.csvUrl + sep + '_=' + Date.now(), 12000, { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('CSV HTTP ' + r.status);
+        return r.text();
+      })
+      .then(function (text) {
+        // Google's publish cache lags ~1 min; don't touch the server-clock skew.
+        return {
+          orders: csvToOrders(text, view),
+          serverNow: effectiveNow(),
+          demo: false,
+          source: 'csv',
+        };
+      });
+  }
+
+  /* ── Read orchestration ──────────────────────────────────── */
+  /* Apps Script first (freshest, per-view projection). If it fails, fall
+     back to the published CSV and back off the Web App for a minute so a
+     dead endpoint doesn't add latency to every poll. Any Web App success
+     resets the backoff. DEMO only when neither source is configured. */
+  var _webAppDownUntil = 0;
+
+  function fetchData(view) {
+    var cfg = getConfig();
+    if (!cfg.url && !cfg.csvUrl) {
+      var d = global.__OM_DEMO || (global.__OM_DEMO = (global.OM_SAMPLE ? global.OM_SAMPLE() : { orders: [], serverNow: Date.now() }));
+      setServerNow(Date.now());
+      return Promise.resolve({ orders: d.orders.map(normOrder), serverNow: Date.now(), demo: true, source: 'demo' });
+    }
+    if (cfg.url && Date.now() >= _webAppDownUntil) {
+      return fetchAppsScript(view, cfg)
+        .then(function (res) { _webAppDownUntil = 0; return res; })
+        .catch(function (err) {
+          _webAppDownUntil = Date.now() + 60000;
+          if (!cfg.csvUrl) throw err;
+          return fetchCsvData(view, cfg);
+        });
+    }
+    if (cfg.csvUrl) {
+      return fetchCsvData(view, cfg).catch(function (err) {
+        _webAppDownUntil = 0;              // CSV died too — retry the Web App next poll
+        throw err;
+      });
+    }
+    return fetchAppsScript(view, cfg);
   }
 
   /* ── Write API (doPost; text/plain to avoid CORS preflight) ── */
   /* post('setStatus', {orderId, status}) → resolves to { orders, serverNow }
-     In DEMO mode (no URL) it mutates the in-memory sample and returns it. */
+     In DEMO mode (nothing configured) it mutates the in-memory sample.
+     Writes always need the Web App — the CSV feed is read-only. */
   function post(action, payload) {
     var cfg = getConfig();
     payload = payload || {};
-    if (!cfg.url) return Promise.resolve(demoMutate(action, payload));
+    if (!cfg.url) {
+      if (!cfg.csvUrl) return Promise.resolve(demoMutate(action, payload));
+      return Promise.reject(new Error('Writes need the Apps Script Web App URL (see Settings) — the sheet feed is read-only.'));
+    }
     var body = Object.assign({ action: action, key: cfg.token, pin: cfg.pin }, payload);
     return fetch(cfg.url, {
       method: 'POST',
@@ -330,6 +475,42 @@
     return { reload: load, stop: function () { clearInterval(tickTimer); } };
   }
 
+  /* ── Kiosk hardening (TVs/iPads that run for days) ───────── */
+  /* • Screen wake-lock so a TV browser never dims/sleeps mid-service.
+     • One reload during the quiet 3am hour (only after 6h+ uptime) so a
+       display that runs for weeks picks up deploys and sheds any leaks. */
+  var _bootTs = Date.now();
+  function kiosk() {
+    function lock() {
+      if (navigator.wakeLock && document.visibilityState === 'visible') {
+        navigator.wakeLock.request('screen').catch(function () {});
+      }
+    }
+    lock();
+    document.addEventListener('visibilitychange', lock);
+    setInterval(function () {
+      if (Date.now() - _bootTs > 6 * 3600000 && new Date().getHours() === 3) {
+        location.reload();
+      }
+    }, 60000);
+  }
+
+  /* ── Connection self-test (admin page) ───────────────────── */
+  /* Probes both sources independently → { api:{ok,…}, csv:{ok,…} }. */
+  function testSources() {
+    var cfg = getConfig();
+    function wrap(p) {
+      return p.then(
+        function (res) { return { ok: true, count: res.orders.length, source: res.source }; },
+        function (err) { return { ok: false, error: (err && err.message) || String(err) }; }
+      );
+    }
+    return Promise.all([
+      cfg.url ? wrap(fetchAppsScript('warehouse', cfg)) : Promise.resolve({ ok: false, error: 'No Web App URL configured' }),
+      cfg.csvUrl ? wrap(fetchCsvData('warehouse', cfg)) : Promise.resolve({ ok: false, error: 'No published-CSV link configured' }),
+    ]).then(function (r) { return { api: r[0], csv: r[1] }; });
+  }
+
   /* ── Header clock (shared) ───────────────────────────────── */
   /* dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); anything else → "Thu, Jun 25". */
   function startClock(clockEl, dateEl, dateStyle) {
@@ -353,12 +534,15 @@
     sortOrders: sortOrders,
     fetchData: fetchData,
     post: post,
+    testSources: testSources,
     startPolling: startPolling,
     startClock: startClock,
+    kiosk: kiosk,
     effectiveNow: effectiveNow,
     etaSeconds: etaSeconds,
     fmtEta: fmtEta,
     pullElapsedMs: pullElapsedMs,
+    readyElapsedMs: readyElapsedMs,
     fmtDuration: fmtDuration,
     fmtDateTime: fmtDateTime,
     fmtTime: fmtTime,

@@ -13,6 +13,7 @@
   var EST_MIN = 0, EST_MAX = 60, EST_STEP = 5;   // 5-minute estimate increments
 
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
+  OM.kiosk();
   OMUI.pinGate(start);
 
   function setLive(state, txt) {
@@ -159,7 +160,8 @@
       refresh: cfg.refreshInteractive,
       onData: function (res) {
         setLive('', 'LIVE');
-        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now());
+        document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(Date.now()) +
+          (res.source === 'csv' ? ' · sheet feed (writes still live)' : '');
         applySnapshot(res);
       },
       onError: function (err) { setLive('err', 'ERR'); document.getElementById('last-upd').textContent = (err && err.message) || 'Sync failed'; },
