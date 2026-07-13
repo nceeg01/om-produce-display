@@ -14,9 +14,9 @@ body {
 /* ── Top bar / nav ─────────────────────────────────────────── */
 .topbar {
   display: flex; align-items: center; gap: 14px;
-  height: 64px; flex-shrink: 0;
+  min-height: 64px; flex-shrink: 0;
   background: #fff; border-bottom: 3px solid var(--orange);
-  padding: 0 28px; box-shadow: 0 1px 0 var(--border);
+  padding: 6px 28px; box-shadow: 0 1px 0 var(--border);
 }
 .logo-wrap { display: flex; align-items: center; gap: 11px; }
 .logo-sq {
@@ -145,7 +145,7 @@ body {
 .empty p { font-size: 13px; color: var(--muted2); margin-top: 8px; }
 
 @media (max-width: 768px) {
-  .topbar { padding: 0 14px; height: 56px; gap: 10px; }
+  .topbar { padding: 4px 14px; min-height: 56px; gap: 10px; }
   .logo-name { font-size: 18px; }
   .clock { font-size: 22px; }
   .screen-tag { display: none; }

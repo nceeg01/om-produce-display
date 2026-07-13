@@ -5,6 +5,7 @@
   'use strict';
   var cfg = getConfig();
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
+  OM.kiosk();
 
   // Display order of stage groups (active work first).
   var GROUPS = [
@@ -68,6 +69,12 @@
       var t = el('div', 'timer' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o)));
       right.appendChild(t);
     }
+    // Aging on READY orders — spot pallets nobody has collected.
+    var readyMs = OM.readyElapsedMs(o);
+    if (readyMs > 0) {
+      var late = readyMs > cfg.staleReadyMin * 60000;
+      right.appendChild(el('div', 'timer' + (late ? ' warn' : ''), '✓ ready ' + OM.fmtDuration(readyMs)));
+    }
     var eta = OM.fmtEta(o);
     if (eta && o.status !== 'ready' && o.status !== 'invoiced') right.appendChild(el('div', 'eta', eta));
     bot.appendChild(right);
@@ -115,7 +122,15 @@
       hd.appendChild(el('span', 'ct', String(list.length)));
       grp.appendChild(hd);
       var cards = el('div', 'cards');
-      list.forEach(function (o) { cards.appendChild(card(o)); });
+      // Done is history — cap it so active work keeps the screen.
+      var visible = g.key === 'done' ? list.slice(-4) : list;
+      visible.forEach(function (o) { cards.appendChild(card(o)); });
+      if (g.key === 'done' && list.length > visible.length) {
+        var more = el('div', 'card done');
+        more.style.display = 'flex'; more.style.alignItems = 'center'; more.style.justifyContent = 'center';
+        more.appendChild(el('div', 'oid', '+ ' + (list.length - visible.length) + ' more collected today — see Analytics'));
+        cards.appendChild(more);
+      }
       grp.appendChild(cards);
       board.appendChild(grp);
     });
@@ -159,13 +174,14 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        'Updated ' + OM.fmtTime(OM.effectiveNow()) +
+        (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },
     onError: function (err) {
       setLive('err', 'ERR');
       document.getElementById('last-upd').textContent = (err && err.message) || 'Load failed — retrying';
-      if (!cfg.url) document.getElementById('ov').style.display = 'flex';
+      if (!cfg.url && !cfg.csvUrl) document.getElementById('ov').style.display = 'flex';
     },
     onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
   });

@@ -5,6 +5,7 @@
 (function () {
   'use strict';
   var SVGNS = 'http://www.w3.org/2000/svg';
+  OM.kiosk();
 
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
   function svg(tag, attrs, txt) {
@@ -69,7 +70,7 @@
     orders.forEach(function (o) {
       var t = o.t.done || o.t.ready;
       if (!t) return;
-      var h = new Date(t).getHours();
+      var h = OM.tzParts(t).h;      // bucket by fleet-TZ hour, not TV-local
       buckets[h] = (buckets[h] || 0) + 1;
     });
     var hours = Object.keys(buckets).map(Number).sort(function (a, b) { return a - b; });
@@ -129,6 +130,10 @@
       document.getElementById('demo').style.display = res.demo ? '' : 'none';
       document.getElementById('lpill').className = 'live-pill';
       document.getElementById('ltxt').textContent = 'LIVE';
+      if (res.source === 'csv') {
+        document.getElementById('an-note').textContent =
+          'Analytics are computed from today’s sheet via the published feed (the LOG history needs the Web App connection).';
+      }
       render(res.orders);
     },
     onError: function () {

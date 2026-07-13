@@ -7,7 +7,10 @@
   'use strict';
   var cfg = getConfig();
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
+  OM.kiosk();
   var lastOrders = [];
+  // Invoice list rotates like the pickup TV when it outgrows one page.
+  var invRot = OM.makeRotator(8, cfg.tvRotateSec || 5);
 
   function setLive(state, txt) {
     document.getElementById('lpill').className = 'live-pill' + (state ? ' ' + state : '');
@@ -27,6 +30,12 @@
     o.addons.forEach(function (a) { meta.appendChild(el('span', 'addon', a)); });
     info.appendChild(meta);
     r.appendChild(info);
+    // How long it's been sitting ready — invoice the oldest first.
+    var readyMs = OM.readyElapsedMs(o);
+    if (readyMs > 60000) {
+      var age = el('div', 'age' + (readyMs > cfg.staleReadyMin * 60000 ? ' warn' : ''), OM.fmtDuration(readyMs) + ' waiting');
+      r.appendChild(age);
+    }
     r.appendChild(statusPill(o.status));
     return r;
   }
@@ -36,7 +45,7 @@
     r.appendChild(el('div', 'nm', o.customer || '—'));
     if (o.boxes > 0) r.appendChild(el('span', 'bx', '📦 ' + o.boxes));
     var eta = OM.fmtEta(o);
-    r.appendChild(el('div', 'eta', eta ? 'Ready in ' + eta : 'Pulling'));
+    r.appendChild(el('div', 'eta', !eta ? 'Pulling' : (eta.charAt(0) === '~' ? 'Ready in ' + eta : eta)));
     return r;
   }
 
@@ -56,6 +65,8 @@
 
     var inv = document.getElementById('inv-list');
     inv.innerHTML = '';
+    var pg = document.getElementById('inv-page');
+    pg.textContent = '';
     if (!toInvoice.length) {
       var em = el('div', 'empty');
       em.appendChild(el('div', 'ei', '✅'));
@@ -63,7 +74,9 @@
       em.appendChild(el('p', null, 'No orders waiting to be invoiced.'));
       inv.appendChild(em);
     } else {
-      toInvoice.forEach(function (o, i) { inv.appendChild(invRow(o, i + 1)); });
+      var v = invRot.view(toInvoice);
+      v.slice.forEach(function (o, i) { inv.appendChild(invRow(o, v.start + i + 1)); });
+      if (v.pages > 1) pg.textContent = (v.start + 1) + '–' + (v.start + v.count) + ' of ' + v.total + ' · page ' + (v.page + 1) + '/' + v.pages;
     }
 
     var nx = document.getElementById('nx-list');
@@ -78,7 +91,7 @@
     }
   }
 
-  setInterval(function () { if (lastOrders.length) render(lastOrders); }, 1000);
+  setInterval(function () { if (lastOrders.length) { invRot.tick(); render(lastOrders); } }, 1000);
 
   OM.startPolling({
     view: 'warehouse',
@@ -88,13 +101,14 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        'Updated ' + OM.fmtTime(OM.effectiveNow()) +
+        (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },
     onError: function (err) {
       setLive('err', 'ERR');
       document.getElementById('last-upd').textContent = (err && err.message) || 'Load failed — retrying';
-      if (!cfg.url) document.getElementById('ov').style.display = 'flex';
+      if (!cfg.url && !cfg.csvUrl) document.getElementById('ov').style.display = 'flex';
     },
     onTick: function (s) { document.getElementById('cdown').textContent = '· ' + s + 's'; },
   });

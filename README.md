@@ -1,26 +1,34 @@
 # OM Produce — Display System
 
-Real-time order display for a produce pickup operation. A **private Google Sheet** is the
-database; a small **Google Apps Script Web App** exposes it as token-gated JSON; a static
-**Vercel** app renders four screens. No external server, no build step, no framework.
+Real-time order display for a produce pickup operation. A **Google Sheet** is the
+database; a static **Vercel** app renders the screens. No external server, no build step,
+no framework. Two independent read paths mean the displays are **permanently connected —
+zero per-device setup, nothing to re-configure**:
 
 ```
-Private Google Sheet ──(Apps Script Web App, runs as op2)──▶ JSON ──▶ Vercel screens
-  ORDERS (editable)                                                   /warehouse
-  LOG (history)                                                       /pickup
-                                                                      /window
-                                                                      /analytics
+Google Sheet ──┬─(Apps Script Web App — token JSON, read+write)──▶ Vercel screens
+  ORDERS       │                                                      /warehouse /pickup
+  LOG          └─(Published-to-web CSV — public, read-only)──▶        /window /analytics
+                  automatic fallback whenever the Web App read fails  /control /checkin
 ```
+
+1. **Apps Script Web App** (primary): freshest data, per-view projection, and the only
+   write path. Reads are token-gated when `API_TOKEN` is set in Script Properties.
+2. **Published CSV feed** (fallback): the sheet's *File → Share → Publish to web → ORDERS
+   → CSV* link, baked into `assets/config.js`. Needs **no token**, so even with nothing
+   else configured every display still works (Google caches it ~1 min). Screens switch to
+   it automatically and show "· sheet feed" in the bottom bar, retrying the Web App every
+   minute.
 
 ## Screens
 
 | URL | Audience | Shows / does |
 |-----|----------|-------|
 | `/` | Admin | Preview + setup guide (connection is now baked in — see below) |
-| `/control` | **Warehouse iPad** | **Tap to edit** — ±boxes, **Start / End / Pickup** times (tap a time or **Now**), **±5-min estimate**. Status auto-derives. Auto-unlocks. |
+| `/control` | **Warehouse iPad** | **One big tap per stage** (▶ Start Pulling → ✓ Done Pulling → 📦 Picked Up) + ±boxes, ±5-min estimate, editable **Start/End/Pickup** time chips, tap-to-filter counters. Auto-unlocks. |
 | `/checkin` | **Sales window (op3)** | **Mark arrivals, reorder the queue, quick-add walk-ins, record customer pickup time.** Auto-unlocks. |
 | `/warehouse` | Warehouse TV | Orders by stage, boxes, addons, live pull timers, "Now Pulling" strip, stale alerts |
-| `/pickup` | Customer TV | "Now Ready" hero + **rotating queue (5–7 / page, every 5s)** with per-line ETAs (customer **name** only) |
+| `/pickup` | Customer TV | "Now Ready" hero + **rotating queue (≤10 / page, auto-advances every 5s)** with per-line ETAs (customer **name** only) |
 | `/window` | Sales desk TV | What to invoice **now** + what's coming up, with arrival times |
 | `/analytics` | Manager | Pull times, throughput by hour, boxes/hour, slowest orders |
 
@@ -89,22 +97,29 @@ Share the spreadsheet with op1 & op3 as **Editors**, op2 as **Viewer**, and **tu
 “anyone with the link.”**
 
 ### 3. Connect the app — already permanent
-The Web App URL and staff PIN (**9020**) are **baked into
+The Web App URL, the **published CSV feed**, and the staff PIN (**9020**) are **baked into
 [`assets/config.js`](assets/config.js)**, so every TV / iPad goes live on load with **no
-per-kiosk setup**. The **API token is kept out of the repo** and injected at deploy time
-from a Vercel **environment variable**:
+per-kiosk setup — ever**. Even if the Web App read fails (missing token, redeploy, outage),
+the screens keep running on the CSV feed by themselves.
+
+Also publish the CSV once: in the sheet, **File → Share → Publish to web → ORDERS tab →
+CSV → Publish** (already done for the current sheet; the link is in `config.js`).
+
+The **API token is kept out of the repo** and injected at deploy time from a Vercel
+**environment variable** — it is only needed for *live* Web-App reads and for **writes**
+from `/control` and `/checkin` when the script enforces a token:
 
 1. In the Vercel project → **Settings → Environment Variables**, add `OM_API_TOKEN` = your
    Apps Script `API_TOKEN` (the same value as the sheet's Script Property). *(Optional:
-   `OM_WEBAPP_URL`, `OM_STAFF_PIN` to override the baked URL / PIN.)*
+   `OM_WEBAPP_URL`, `OM_CSV_URL`, `OM_STAFF_PIN` to override the baked URL / feed / PIN.)*
 2. **Redeploy.** The build (`scripts/gen-env.js`, wired via `vercel.json`'s `buildCommand`)
    writes `assets/env.js` from those vars, and `config.js` merges them onto `OM_CONFIG`.
 
 The committed `assets/env.js` is an empty stub, so the repo never holds the token. Locally
 (no build) the token is empty — paste it once on the admin page (saved to localStorage) for
-dev. To re-point the fleet URL permanently, edit the constant at the top of `config.js`.
+dev. To re-point the fleet permanently, edit the constants at the top of `config.js`.
 
-> **Demo mode:** with no URL configured, every screen renders built-in sample data
+> **Demo mode:** with neither URL configured, every screen renders built-in sample data
 > (`assets/sample.js`) so you can preview the UI before the sheet/script are ready.
 
 ## Daily use
@@ -131,7 +146,13 @@ vercel.json                    clean URLs + no-store headers
 ```
 
 All shared logic lives once in `assets/api.js` (`OM.*`) — pages are thin render layers.
-`OM.post(action, payload)` performs writes; `OM.sortOrders()` is the one canonical queue order.
+`OM.post(action, payload)` performs writes; `OM.sortOrders()` is the one canonical queue order;
+`OM.fetchData(view)` handles the Web-App→CSV fallback chain transparently for every page.
 Sync: TV pages refresh every **10s**, interactive pages every **5s** + instantly after each tap
-(tunable in `assets/config.js`). In **demo mode** (no URL) every page — including taps on
-`/control` and `/checkin` — works against in-memory sample data.
+(tunable in `assets/config.js`). Kiosk hardening: screens hold a wake-lock and self-reload
+once during the 3am hour. **Clock & timestamps:** everything renders in the fleet timezone
+(`TIMEZONE` in config.js — **America/Chicago**, CST/CDT automatic) and the clock syncs itself
+against server time (Vercel edge `Date` header every 10 min, Apps Script `serverNow` as
+backup) — a TV with a wrong or drifting clock still shows accurate CST times and ETAs.
+In **demo mode** (nothing configured) every page — including taps on `/control` and
+`/checkin` — works against in-memory sample data.

@@ -64,6 +64,8 @@
       pinGate(function () { if (reloadFn) reloadFn(); });
     } else if (err && err.code === 'max') {
       toast(err.message || 'Limit reached', 'err');
+    } else if (err && (err.code === 'token' || err.message === 'token')) {
+      toast('Server needs the API token — set OM_API_TOKEN in Vercel or paste it in Settings', 'err');
     } else {
       toast((err && err.message) || 'Action failed', 'err');
     }
