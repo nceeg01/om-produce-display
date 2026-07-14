@@ -199,7 +199,10 @@ function doWrite(body, callback) {
     var fail = applyAction(sh, body, now);       // {error,message} on failure, else null
     if (fail) return respond({ ok:false, error: fail.error, message: fail.message }, callback);
     SpreadsheetApp.flush();
-    return respond({ ok:true, serverNow: Date.now(), orders: readOrders('warehouse') }, callback);
+    // `wrote:true` marks a genuine write response, so the client can tell it
+    // apart from an OLD doGet read (which would look like a false success on
+    // the JSONP write path if this Code.gs hasn't been re-deployed yet).
+    return respond({ ok:true, wrote:true, serverNow: Date.now(), orders: readOrders('warehouse') }, callback);
   } catch (err) {
     return respond({ ok:false, error: String(err) }, callback);
   } finally {

@@ -504,7 +504,14 @@
     function jsonpWrite() {
       var sep = cfg.url.indexOf('?') >= 0 ? '&' : '?';
       var url = cfg.url + sep + 'data=' + encodeURIComponent(JSON.stringify(body)) + '&_=' + Date.now();
-      return jsonp(url).then(handleWriteData);
+      return jsonp(url).then(function (data) {
+        // ok:true but no `wrote` marker → we hit an OLD doGet (a read handler),
+        // i.e. the latest Code.gs hasn't been deployed. Don't report a false save.
+        if (data && data.ok !== false && !data.wrote) {
+          throw new Error('Apps Script needs re-deploying with the latest Code.gs — the update reached the read endpoint, not the writer.');
+        }
+        return handleWriteData(data);
+      });
     }
 
     return fetch(cfg.url, {
