@@ -37,11 +37,12 @@
     .qsub { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 11px; color: var(--muted); }
     .arr { color: var(--olive); font-weight: 700; }
     .qact { display: flex; align-items: center; gap: 6px; }
-    .here-btn { border: 1px solid var(--olive-m); background: #fff; color: var(--olive); font-family: var(--f-head); font-weight: 800; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+    .here-btn { border: 1px solid var(--olive-m); background: #fff; color: var(--olive); font-family: var(--f-head); font-weight: 800; font-size: 14px; letter-spacing: .5px; text-transform: uppercase; border-radius: 9px; padding: 0 18px; min-height: 46px; cursor: pointer; }
     .here-btn.on { background: var(--olive); color: #fff; }
-    .mvbtn { width: 36px; height: 32px; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; font-size: 16px; cursor: pointer; color: var(--text); }
+    .here-btn:active { transform: scale(.97); }
+    .mvbtn { width: 46px; height: 40px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; font-size: 18px; cursor: pointer; color: var(--text); }
     .mvbtn:active { background: var(--surface2); }
-    .mvcol { display: flex; flex-direction: column; gap: 3px; }
+    .mvcol { display: flex; flex-direction: column; gap: 4px; }
 
     .add { padding: 18px 22px; }
     .add label { display: block; font-family: var(--f-head); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
@@ -56,12 +57,12 @@
     .qact { flex-wrap: wrap; justify-content: flex-end; }
     .pu-cell { display: flex; flex-direction: column; gap: 4px; }
     .pu-lbl { font-family: var(--f-head); font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted2); }
-    .pickedit { display: flex; align-items: center; gap: 4px; }
-    .pickedit input[type=time] { font-family: var(--f-head); font-size: 14px; font-weight: 800; border: 1px solid var(--border); border-radius: 7px; padding: 0 6px; height: 38px; background: var(--surface); color: var(--text); width: 92px; }
+    .pickedit { display: flex; align-items: center; gap: 6px; }
+    .pickedit input[type=time] { font-family: var(--f-head); font-size: 16px; font-weight: 800; border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; height: 46px; background: var(--surface); color: var(--text); width: 104px; }
     .pickedit input.set { border-color: var(--olive-m); background: var(--olive-l); color: var(--olive); }
     .pickedit input[type=time]:focus { outline: none; border-color: var(--orange); }
-    .pu-now { height: 38px; padding: 0 9px; border: 1px solid var(--olive-m); background: #fff; color: var(--olive); border-radius: 7px; font-family: var(--f-head); font-weight: 800; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; }
-    .pu-now:active { background: var(--olive-l); }
+    .pu-now { height: 46px; padding: 0 14px; border: 1px solid var(--olive-m); background: #fff; color: var(--olive); border-radius: 8px; font-family: var(--f-head); font-weight: 800; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; }
+    .pu-now:active { background: var(--olive-l); transform: scale(.97); }
   </style>
 </head>
 <body>

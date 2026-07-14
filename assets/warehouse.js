@@ -1,5 +1,9 @@
 /* ============================================================
-   OM Produce — Warehouse view render
+   OM Produce — Warehouse TV (pickup-style, all details at a glance)
+   Left  : "Now Pulling" — the active pulls, with live timers.
+   Right : "Order Queue" — every other active order, rotating 10 / page
+           every 5s, each row showing boxes, add-ons, arrival, and its
+           own timer / ETA / ready-age.
    ============================================================ */
 (function () {
   'use strict';
@@ -7,164 +11,152 @@
   OM.startClock(document.getElementById('clk'), document.getElementById('dln'));
   OM.kiosk();
 
-  // Display order of stage groups (active work first).
-  var GROUPS = [
-    { key: 'pulling',  label: 'Pulling Now' },
-    { key: 'received', label: 'Received — Queue' },
-    { key: 'ready',    label: 'Ready — Awaiting Pickup' },
-    { key: 'invoiced', label: 'Invoiced — Loading' },
-    { key: 'done',     label: 'Done' },
-  ];
-
+  var PAGE_SIZE = cfg.tvPageSize || 10;
+  var ROTATE_SEC = cfg.tvRotateSec || 5;
+  var rot = OM.makeRotator(PAGE_SIZE, ROTATE_SEC);
   var lastOrders = [];
 
   function setLive(state, txt) {
-    var p = document.getElementById('lpill');
-    p.className = 'live-pill' + (state ? ' ' + state : '');
+    document.getElementById('lpill').className = 'live-pill' + (state ? ' ' + state : '');
     document.getElementById('ltxt').textContent = txt;
   }
-
-  function el(tag, cls, txt) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (txt != null) e.textContent = txt;
-    return e;
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function statusPill(key) { var m = OM.STATUS[key] || OM.STATUS.received; return el('span', 'pill ' + m.cls, m.label); }
+  function addonsEl(o) {
+    if (!o.addons.length) return null;
+    var ad = el('div', 'addons');
+    o.addons.forEach(function (a) { ad.appendChild(el('span', 'addon', a)); });
+    return ad;
   }
 
-  function card(o) {
-    var c = el('div', 'card ' + o.status);
+  /* ── Left: Now Pulling ──────────────────────────────────── */
+  function nowCard(o) {
     var stale = OM.pullElapsedMs(o) > cfg.stalePullMin * 60000;
-    if (stale) c.className += ' stale';
-
-    var top = el('div', 'card-top');
+    var c = el('div', 'nowcard' + (stale ? ' stale' : ''));
+    var top = el('div', 'top');
     var left = el('div');
-    left.appendChild(el('div', 'cust', o.customer || '—'));
-    if (o.id) left.appendChild(el('div', 'oid', o.id));
-    if (o.checkedInAt) { var a = el('div', 'oid', '✓ here ' + OM.fmtTime(o.checkedInAt)); a.style.color = 'var(--olive)'; left.appendChild(a); }
+    left.appendChild(el('div', 'nm', o.customer || '—'));
+    var meta = el('div', 'oid');
+    meta.textContent = (o.id ? o.id : '') + (o.checkedInAt ? '   ✓ here ' + OM.fmtTime(o.checkedInAt) : '');
+    left.appendChild(meta);
     top.appendChild(left);
-
     if (o.boxes > 0) {
-      var bx = el('div', 'boxes');
-      bx.appendChild(el('div', 'n', String(o.boxes)));
-      bx.appendChild(el('div', 'l', 'Boxes'));
+      var bx = el('div', 'bx'); bx.appendChild(el('div', 'n', String(o.boxes))); bx.appendChild(el('div', 'l', 'Boxes'));
       top.appendChild(bx);
     }
     c.appendChild(top);
-
-    if (o.addons.length) {
-      var ad = el('div', 'addons');
-      o.addons.forEach(function (a) { ad.appendChild(el('span', 'addon', a)); });
-      c.appendChild(ad);
-    }
-    if (o.notes) c.appendChild(el('div', 'notes', o.notes));
-
-    var bot = el('div', 'card-bot');
-    bot.appendChild(statusPill(o.status));
-
-    var right = el('div');
-    right.style.display = 'flex';
-    right.style.alignItems = 'center';
-    right.style.gap = '10px';
-    if (o.status === 'pulling') {
-      var t = el('div', 'timer' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o)));
-      right.appendChild(t);
-    }
-    // Aging on READY orders — spot pallets nobody has collected.
-    var readyMs = OM.readyElapsedMs(o);
-    if (readyMs > 0) {
-      var late = readyMs > cfg.staleReadyMin * 60000;
-      right.appendChild(el('div', 'timer' + (late ? ' warn' : ''), '✓ ready ' + OM.fmtDuration(readyMs)));
-    }
+    var ad = addonsEl(o); if (ad) c.appendChild(ad);
+    var bot = el('div', 'bot');
+    bot.appendChild(el('div', 'timer' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o))));
     var eta = OM.fmtEta(o);
-    if (eta && o.status !== 'ready' && o.status !== 'invoiced') right.appendChild(el('div', 'eta', eta));
-    bot.appendChild(right);
+    bot.appendChild(el('div', 'eta', eta && eta.charAt(0) === '~' ? 'Ready in ' + eta : (eta || '')));
     c.appendChild(bot);
     return c;
   }
 
-  function statusPill(key) {
-    var meta = OM.STATUS[key] || OM.STATUS.received;
-    return el('span', 'pill ' + meta.cls, meta.label);
+  function renderNow(pulling) {
+    document.getElementById('now-cnt').textContent = pulling.length;
+    var host = document.getElementById('nowlist');
+    host.innerHTML = '';
+    if (!pulling.length) {
+      var em = el('div', 'now-empty');
+      em.appendChild(el('div', 'ei', '⏸'));
+      em.appendChild(el('p', null, 'Nothing being pulled right now.'));
+      host.appendChild(em);
+      return;
+    }
+    pulling.forEach(function (o) { host.appendChild(nowCard(o)); });
+  }
+
+  /* ── Right: rotating detail queue ───────────────────────── */
+  // Right-hand info per row: ready-age for ready/invoiced, ETA for pulling,
+  // estimate/"in queue" for received.
+  function rowInfo(o) {
+    if (o.status === 'ready' || o.status === 'invoiced') {
+      var rm = OM.readyElapsedMs(o);
+      if (rm > 60000) return { cls: rm > cfg.staleReadyMin * 60000 ? 'ready warn' : 'ready', txt: '✓ ready ' + OM.fmtDuration(rm) };
+      return { cls: 'ready', txt: 'Ready ✓' };
+    }
+    if (o.status === 'pulling') {
+      var pm = OM.pullElapsedMs(o);
+      return { cls: pm > cfg.stalePullMin * 60000 ? 'eta warn' : 'eta', txt: '⏱ ' + OM.fmtDuration(pm) };
+    }
+    var eta = OM.fmtEta(o);
+    if (eta && eta.charAt(0) === '~') return { cls: 'eta', txt: eta };
+    return { cls: 'wait', txt: 'In queue' };
+  }
+
+  function qrow(o, pos) {
+    var r = el('div', 'qrow ' + o.status);
+    r.appendChild(el('div', 'pos', String(pos)));
+    var mid = el('div', 'mid');
+    mid.appendChild(el('div', 'nm', o.customer || '—'));
+    var sub = el('div', 'sub');
+    sub.appendChild(statusPill(o.status));
+    if (o.id) sub.appendChild(el('span', 'oid', o.id));
+    if (o.checkedInAt) sub.appendChild(el('span', 'arr', '✓ ' + OM.fmtTime(o.checkedInAt)));
+    o.addons.forEach(function (a) { sub.appendChild(el('span', 'addon', a)); });
+    mid.appendChild(sub);
+    r.appendChild(mid);
+    var rt = el('div', 'rt');
+    if (o.boxes > 0) rt.appendChild(el('div', 'bx', '📦 ' + o.boxes));
+    var info = rowInfo(o);
+    rt.appendChild(el('div', 'info ' + info.cls, info.txt));
+    r.appendChild(rt);
+    return r;
+  }
+
+  function renderPageInd(v) {
+    var host = document.getElementById('qpage');
+    host.innerHTML = '';
+    if (!v || v.pages <= 1) return;
+    host.appendChild(el('span', 'pglbl', (v.start + 1) + '–' + (v.start + v.count) + ' of ' + v.total));
+    var dots = el('div', 'qdots');
+    for (var i = 0; i < v.pages; i++) dots.appendChild(el('div', 'qdot' + (i === v.page ? ' on' : '')));
+    host.appendChild(dots);
+  }
+
+  function renderQueue(queue) {
+    document.getElementById('q-cnt').textContent = queue.length;
+    var v = rot.view(queue);
+    var host = document.getElementById('qwrap');
+    host.innerHTML = '';
+    if (!v.slice.length) {
+      host.appendChild(el('div', 'qempty', 'Queue is clear — every order is being pulled or done.'));
+      renderPageInd(null);
+      return;
+    }
+    v.slice.forEach(function (o, i) { host.appendChild(qrow(o, v.start + i + 1)); });
+    renderPageInd(v);
   }
 
   function render(orders) {
     lastOrders = orders;
-    var board = document.getElementById('board');
-    board.innerHTML = '';
+    var active = orders.filter(function (o) { return o.status !== 'done'; });
 
     var counts = { received: 0, pulling: 0, ready: 0, invoiced: 0, done: 0 };
     var boxTotal = 0;
     orders.forEach(function (o) { counts[o.status]++; if (o.boxes) boxTotal += o.boxes; });
-
-    document.getElementById('ct').textContent = orders.filter(function (o) { return o.status !== 'done'; }).length;
-    ['received', 'pulling', 'ready', 'invoiced'].forEach(function (k) {
-      document.getElementById('c-' + k).textContent = counts[k];
-    });
+    document.getElementById('ct').textContent = active.length;
+    ['received', 'pulling', 'ready', 'invoiced'].forEach(function (k) { document.getElementById('c-' + k).textContent = counts[k]; });
     document.getElementById('boxtotal').textContent = boxTotal;
     document.getElementById('avgpull').textContent = avgPull(orders);
-    renderPrep(orders);
 
-    if (!orders.length) {
-      var em = el('div', 'empty');
-      em.appendChild(el('div', 'ei', '📋'));
-      em.appendChild(el('h3', null, 'No Orders Yet'));
-      em.appendChild(el('p', null, 'Orders appear here as the sales window and warehouse add them.'));
-      board.appendChild(em);
-      return;
-    }
-
-    GROUPS.forEach(function (g) {
-      var list = OM.sortOrders(orders.filter(function (o) { return o.status === g.key; }));
-      if (!list.length) return;
-      var grp = el('div', 'group');
-      var hd = el('div', 'group-hd');
-      hd.appendChild(el('span', 'ttl', g.label));
-      hd.appendChild(el('span', 'ct', String(list.length)));
-      grp.appendChild(hd);
-      var cards = el('div', 'cards');
-      // Done is history — cap it so active work keeps the screen.
-      var visible = g.key === 'done' ? list.slice(-4) : list;
-      visible.forEach(function (o) { cards.appendChild(card(o)); });
-      if (g.key === 'done' && list.length > visible.length) {
-        var more = el('div', 'card done');
-        more.style.display = 'flex'; more.style.alignItems = 'center'; more.style.justifyContent = 'center';
-        more.appendChild(el('div', 'oid', '+ ' + (list.length - visible.length) + ' more collected today — see Analytics'));
-        cards.appendChild(more);
-      }
-      grp.appendChild(cards);
-      board.appendChild(grp);
-    });
+    var pulling = OM.sortOrders(active.filter(function (o) { return o.nowPulling; }));
+    var queue = OM.sortOrders(active.filter(function (o) { return !o.nowPulling; }));
+    renderNow(pulling);
+    renderQueue(queue);
   }
 
-  // "Now Pulling" strip — the (≤3) orders the warehouse flagged.
-  function renderPrep(orders) {
-    var pulling = orders.filter(function (o) { return o.nowPulling; });
-    var strip = document.getElementById('prep');
-    var list = document.getElementById('prep-list');
-    list.innerHTML = '';
-    if (!pulling.length) { strip.style.display = 'none'; return; }
-    strip.style.display = '';
-    pulling.forEach(function (o) {
-      var c = el('div', 'prep-card');
-      c.appendChild(el('span', 'nm', o.customer || '—'));
-      if (o.t.pulling) c.appendChild(el('span', 'tm', OM.fmtDuration(OM.pullElapsedMs(o))));
-      list.appendChild(c);
-    });
-  }
-
-  // Average pull time today from completed pulls (t_ready - t_pulling).
   function avgPull(orders) {
     var durs = [];
-    orders.forEach(function (o) {
-      if (o.t.pulling && o.t.ready && o.t.ready > o.t.pulling) durs.push(o.t.ready - o.t.pulling);
-    });
+    orders.forEach(function (o) { if (o.t.pulling && o.t.ready && o.t.ready > o.t.pulling) durs.push(o.t.ready - o.t.pulling); });
     if (!durs.length) return '—';
-    var avg = durs.reduce(function (a, b) { return a + b; }, 0) / durs.length;
-    return OM.fmtDuration(avg);
+    return OM.fmtDuration(durs.reduce(function (a, b) { return a + b; }, 0) / durs.length);
   }
 
-  // Live re-render once a second to advance pull timers / ETAs.
-  setInterval(function () { if (lastOrders.length) render(lastOrders); }, 1000);
+  // Once a second: advance timers/ETAs and rotate the queue page.
+  setInterval(function () { if (lastOrders.length) { rot.tick(); render(lastOrders); } }, 1000);
 
   OM.startPolling({
     view: 'warehouse',
@@ -174,8 +166,7 @@
       document.getElementById('ov').style.display = 'none';
       setLive('', 'LIVE');
       document.getElementById('last-upd').textContent =
-        'Updated ' + OM.fmtTime(OM.effectiveNow()) +
-        (res.source === 'csv' ? ' · sheet feed' : '');
+        'Updated ' + OM.fmtTime(OM.effectiveNow()) + (res.source === 'csv' ? ' · sheet feed' : '');
       render(res.orders);
     },
     onError: function (err) {

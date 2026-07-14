@@ -473,7 +473,15 @@
   /* ── Write API (doPost; text/plain to avoid CORS preflight) ── */
   /* post('setStatus', {orderId, status}) → resolves to { orders, serverNow }
      In DEMO mode (nothing configured) it mutates the in-memory sample.
-     Writes always need the Web App — the CSV feed is read-only. */
+     Writes always need the Web App — the CSV feed is read-only.
+
+     Transport: a fetch() POST first (so a reachable server's ok:false —
+     bad token / PIN — comes back as a proper error we can act on). If the
+     POST itself can't complete — Apps Script often blocks cross-origin
+     fetch writes, which Safari reports as "Load failed" — we retry the same
+     write over JSONP (a <script> GET carrying the request JSON in `data`),
+     which is NOT subject to CORS. That is what actually lets the iPad save
+     to the sheet. */
   function post(action, payload) {
     var cfg = getConfig();
     payload = payload || {};
@@ -482,20 +490,44 @@
       return Promise.reject(new Error('Writes need the Apps Script Web App URL (see Settings) — the sheet feed is read-only.'));
     }
     var body = Object.assign({ action: action, key: cfg.token, pin: cfg.pin }, payload);
+
+    function handleWriteData(data) {
+      if (!data || data.ok === false) {
+        var e = new Error((data && data.message) || (data && data.error) || 'Write failed');
+        e.code = data && data.error;
+        throw e;
+      }
+      setServerNow(data.serverNow);
+      return { orders: (data.orders || []).map(normOrder), serverNow: data.serverNow };
+    }
+
+    function jsonpWrite() {
+      var sep = cfg.url.indexOf('?') >= 0 ? '&' : '?';
+      var url = cfg.url + sep + 'data=' + encodeURIComponent(JSON.stringify(body)) + '&_=' + Date.now();
+      return jsonp(url).then(function (data) {
+        // ok:true but no `wrote` marker → we hit an OLD doGet (a read handler),
+        // i.e. the latest Code.gs hasn't been deployed. Don't report a false save.
+        if (data && data.ok !== false && !data.wrote) {
+          throw new Error('Apps Script needs re-deploying with the latest Code.gs — the update reached the read endpoint, not the writer.');
+        }
+        return handleWriteData(data);
+      });
+    }
+
     return fetch(cfg.url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // simple request → no preflight
       body: JSON.stringify(body),
     })
       .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data || data.ok === false) {
-          var e = new Error((data && data.message) || (data && data.error) || 'Write failed');
-          e.code = data && data.error;
-          throw e;
-        }
-        setServerNow(data.serverNow);
-        return { orders: (data.orders || []).map(normOrder), serverNow: data.serverNow };
+      .then(handleWriteData)
+      .catch(function (err) {
+        // A server that answered ok:false already has a .code — that's a real
+        // decision (token/pin/…), don't paper over it with a retry.
+        if (err && err.code) throw err;
+        // Otherwise the POST never completed (CORS/redirect/network). Retry
+        // over JSONP so the write still reaches the sheet.
+        return jsonpWrite();
       });
   }
 
@@ -609,6 +641,27 @@
     ]).then(function (r) { return { api: r[0], csv: r[1] }; });
   }
 
+  /* Probe whether the server will accept WRITES from Control / Check-in,
+     without changing any data. A status write to a non-existent order only
+     returns "not found" AFTER the token + PIN checks pass, so the error code
+     tells us precisely what (if anything) is wrong. */
+  function testWrite() {
+    var cfg = getConfig();
+    if (!cfg.url) return Promise.resolve({ ok: false, reason: 'no-url', msg: 'No Web App URL — Control & Check-in can’t save (the sheet feed is read-only).' });
+    return post('setStatus', { orderId: '__om_healthcheck__', status: 'Received' })
+      .then(function () { return { ok: true, msg: 'Writes authorized — Control & Check-in can save.' }; })
+      .catch(function (err) {
+        var c = (err && err.code) || '';
+        if (c === 'not found' || c === 'not_found' || c === 'unknown action')
+          return { ok: true, msg: 'Writes authorized — token + PIN accepted.' };
+        if (c === 'token')
+          return { ok: false, reason: 'token', msg: 'Server rejected the API token — set OM_API_TOKEN in Vercel to match the script’s API_TOKEN.' };
+        if (c === 'pin')
+          return { ok: false, reason: 'pin', msg: 'Server rejected the staff PIN — the sheet’s PIN isn’t the one this app uses. Update it with Set PIN below.' };
+        return { ok: false, reason: 'other', msg: (err && err.message) || 'Write probe failed.' };
+      });
+  }
+
   /* ── Header clock (shared) ───────────────────────────────── */
   /* Fleet-TZ + server-synced, so every screen agrees on the time.
      dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); else "Thu, Jun 25". */
@@ -636,6 +689,7 @@
     fetchData: fetchData,
     post: post,
     testSources: testSources,
+    testWrite: testWrite,
     startPolling: startPolling,
     startClock: startClock,
     kiosk: kiosk,

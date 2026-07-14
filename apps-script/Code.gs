@@ -147,10 +147,21 @@ function onEditTrigger(e) {
 }
 
 /* ============================================================
- * 2) doGet — read API
+ * 2) doGet — read API  (+ CORS-safe JSONP write path)
+ * ------------------------------------------------------------
+ * A browser fetch() POST to an Apps Script /exec is often blocked by
+ * CORS (Safari surfaces this as "Load failed"), which silently drops
+ * every write. So writes may also arrive here as a GET carrying the
+ * whole request JSON in the `data` param + a JSONP `callback` — a
+ * <script> tag load, which is NOT subject to CORS. Same token+PIN gate.
  * ========================================================== */
 function doGet(e) {
   var p = (e && e.parameter) || {};
+  if (p.data) {                                  // JSONP write (CORS-proof)
+    var body;
+    try { body = JSON.parse(p.data); } catch (err) { return respond({ ok:false, error:'Bad body' }, p.callback); }
+    return doWrite(body, p.callback);
+  }
   var token = prop('API_TOKEN');
   var out;
   if (token && p.key !== token) {
@@ -169,126 +180,139 @@ function doGet(e) {
 function doPost(e) {
   var body;
   try { body = JSON.parse(e.postData.contents); } catch (err) { return respond({ ok:false, error:'Bad body' }); }
+  return doWrite(body, body.callback);
+}
 
+/* Shared write handler for BOTH doPost (fetch) and doGet (JSONP). */
+function doWrite(body, callback) {
   // setPin is special: allowed only when no PIN is set yet (or force after clear).
-  if (body.action === 'setPin') return respond(setPin(body));
+  if (body.action === 'setPin') return respond(setPin(body), callback);
 
-  if (prop('API_TOKEN') && body.key !== prop('API_TOKEN')) return respond({ ok:false, error:'token' });
-  if (!validPin(body.pin)) return respond({ ok:false, error:'pin' });
+  if (prop('API_TOKEN') && body.key !== prop('API_TOKEN')) return respond({ ok:false, error:'token' }, callback);
+  if (!validPin(body.pin)) return respond({ ok:false, error:'pin' }, callback);
 
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(8000); } catch (err) { return respond({ ok:false, error:'busy' }); }
+  try { lock.waitLock(8000); } catch (err) { return respond({ ok:false, error:'busy' }, callback); }
   try {
     var sh = ordersSheet();
     var now = new Date();
-    var r;
-    switch (body.action) {
-      case 'setStatus':
-        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
-        bootstrapRow(sh, r, now);
-        var stage = normStatus(body.status);
-        sh.getRange(r, COL.Status).setValue(statusLabel(stage));
-        stampStage(sh, r, stage, now);
-        if (stage !== 'pulling') sh.getRange(r, COL.NowPulling).setValue('');
-        if (stage === 'done') { sh.getRange(r, COL.NowPulling).setValue(''); archiveRow(sh, r); }
-        break;
-      case 'setBoxes':
-        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
-        sh.getRange(r, COL.Boxes).setValue(Math.max(0, parseInt(body.boxes, 10) || 0));
-        break;
-      case 'setWait':
-        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
-        sh.getRange(r, COL.WaitMin).setValue(Math.max(0, parseInt(body.waitMin, 10) || 0));
-        sh.getRange(r, COL.wait_set_at).setValue(now);
-        break;
-      // Edit a milestone time from the warehouse iPad (op1) or sales window (op3).
-      // field: 'start' → t_pulling, 'end' → t_ready, 'pickup' → PickupAt (collected).
-      // ms: epoch millis, or null/'' to clear. Status is derived from the times.
-      case 'setTime':
-        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
-        bootstrapRow(sh, r, now);
-        var tWhen = (body.ms == null || body.ms === '') ? '' : new Date(Number(body.ms));
-        if (body.field === 'start') {
-          sh.getRange(r, COL.t_pulling).setValue(tWhen);
-          if (tWhen) {
-            sh.getRange(r, COL.Status).setValue('Pulling');
-            sh.getRange(r, COL.NowPulling).setValue('TRUE');
-            if (!sh.getRange(r, COL.t_received).getValue()) sh.getRange(r, COL.t_received).setValue(tWhen);
-          }
-        } else if (body.field === 'end') {
-          sh.getRange(r, COL.t_ready).setValue(tWhen);
-          if (tWhen) {
-            sh.getRange(r, COL.Status).setValue('Ready');
-            sh.getRange(r, COL.NowPulling).setValue('');
-            if (!sh.getRange(r, COL.t_pulling).getValue()) sh.getRange(r, COL.t_pulling).setValue(tWhen);
-          }
-        } else if (body.field === 'pickup') {
-          sh.getRange(r, COL.PickupAt).setValue(tWhen);
-          if (tWhen) {
-            stampStage(sh, r, 'ready', tWhen);            // backfill received→ready if missing
-            sh.getRange(r, COL.t_done).setValue(tWhen);
-            sh.getRange(r, COL.Status).setValue('Done');
-            sh.getRange(r, COL.NowPulling).setValue('');
-            archiveRow(sh, r);
-          } else if (normStatus(sh.getRange(r, COL.Status).getValue()) === 'done') {
-            sh.getRange(r, COL.Status).setValue('Ready');  // undo an accidental collection
-            sh.getRange(r, COL.t_done).setValue('');
-          }
-        } else {
-          return respond({ ok:false, error:'bad field' });
-        }
-        break;
-      case 'togglePull':
-        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
-        if (body.on) {
-          if (countPulling(sh) >= MAX_PULLING && !sh.getRange(r, COL.NowPulling).getValue())
-            return respond({ ok:false, error:'max', message:'Max ' + MAX_PULLING + ' being pulled' });
-          sh.getRange(r, COL.NowPulling).setValue('TRUE');
-          bootstrapRow(sh, r, now);
-          sh.getRange(r, COL.Status).setValue('Pulling');
-          stampStage(sh, r, 'pulling', now);
-        } else {
-          sh.getRange(r, COL.NowPulling).setValue('');
-        }
-        break;
-      case 'checkIn':
-        r = rowByOrderId(sh, body.orderId); if (!r) return respond({ ok:false, error:'not found' });
-        bootstrapRow(sh, r, now);
-        sh.getRange(r, COL.CheckedInAt).setValue(now);
-        break;
-      case 'reorder':
-        var ids = body.orderIds || [];
-        for (var i = 0; i < ids.length; i++) {
-          var rr = rowByOrderId(sh, ids[i]);
-          if (rr) sh.getRange(rr, COL.QueuePos).setValue(i + 1);
-        }
-        break;
-      case 'quickAdd':
-        var nr = sh.getLastRow() + 1;
-        sh.getRange(nr, COL.Customer).setValue(String(body.customer || '').trim());
-        if (body.addons) {
-          var a = body.addons;
-          if (a[0]) sh.getRange(nr, COL.Addon1).setValue(a[0]);
-          if (a[1]) sh.getRange(nr, COL.Addon2).setValue(a[1]);
-          if (a[2]) sh.getRange(nr, COL.Addon3).setValue(a[2]);
-        }
-        sh.getRange(nr, COL.Status).setValue('Received');
-        sh.getRange(nr, COL.Created).setValue(now);
-        sh.getRange(nr, COL.t_received).setValue(now);
-        sh.getRange(nr, COL.CheckedInAt).setValue(now);
-        sh.getRange(nr, COL.OrderID).setValue(makeOrderId(now, nr));
-        // Put new walk-in at the front of the queue.
-        sh.getRange(nr, COL.QueuePos).setValue(0);
-        break;
-      default:
-        return respond({ ok:false, error:'unknown action' });
-    }
+    var fail = applyAction(sh, body, now);       // {error,message} on failure, else null
+    if (fail) return respond({ ok:false, error: fail.error, message: fail.message }, callback);
     SpreadsheetApp.flush();
-    return respond({ ok:true, serverNow: Date.now(), orders: readOrders('warehouse') });
+    // `wrote:true` marks a genuine write response, so the client can tell it
+    // apart from an OLD doGet read (which would look like a false success on
+    // the JSONP write path if this Code.gs hasn't been re-deployed yet).
+    return respond({ ok:true, wrote:true, serverNow: Date.now(), orders: readOrders('warehouse') }, callback);
   } catch (err) {
-    return respond({ ok:false, error: String(err) });
+    return respond({ ok:false, error: String(err) }, callback);
   } finally {
     lock.releaseLock();
+  }
+}
+
+/* Mutate the sheet for one action. Returns null on success, or
+   { error, message } for an expected failure (caller responds ok:false). */
+function applyAction(sh, body, now) {
+  var r;
+  switch (body.action) {
+    case 'setStatus':
+      r = rowByOrderId(sh, body.orderId); if (!r) return { error:'not found' };
+      bootstrapRow(sh, r, now);
+      var stage = normStatus(body.status);
+      sh.getRange(r, COL.Status).setValue(statusLabel(stage));
+      stampStage(sh, r, stage, now);
+      if (stage !== 'pulling') sh.getRange(r, COL.NowPulling).setValue('');
+      if (stage === 'done') { sh.getRange(r, COL.NowPulling).setValue(''); archiveRow(sh, r); }
+      return null;
+    case 'setBoxes':
+      r = rowByOrderId(sh, body.orderId); if (!r) return { error:'not found' };
+      sh.getRange(r, COL.Boxes).setValue(Math.max(0, parseInt(body.boxes, 10) || 0));
+      return null;
+    case 'setWait':
+      r = rowByOrderId(sh, body.orderId); if (!r) return { error:'not found' };
+      sh.getRange(r, COL.WaitMin).setValue(Math.max(0, parseInt(body.waitMin, 10) || 0));
+      sh.getRange(r, COL.wait_set_at).setValue(now);
+      return null;
+    // Edit a milestone time from the warehouse iPad (op1) or sales window (op3).
+    // field: 'start' → t_pulling, 'end' → t_ready, 'pickup' → PickupAt (collected).
+    // ms: epoch millis, or null/'' to clear. Status is derived from the times.
+    case 'setTime':
+      r = rowByOrderId(sh, body.orderId); if (!r) return { error:'not found' };
+      bootstrapRow(sh, r, now);
+      var tWhen = (body.ms == null || body.ms === '') ? '' : new Date(Number(body.ms));
+      if (body.field === 'start') {
+        sh.getRange(r, COL.t_pulling).setValue(tWhen);
+        if (tWhen) {
+          sh.getRange(r, COL.Status).setValue('Pulling');
+          sh.getRange(r, COL.NowPulling).setValue('TRUE');
+          if (!sh.getRange(r, COL.t_received).getValue()) sh.getRange(r, COL.t_received).setValue(tWhen);
+        }
+      } else if (body.field === 'end') {
+        sh.getRange(r, COL.t_ready).setValue(tWhen);
+        if (tWhen) {
+          sh.getRange(r, COL.Status).setValue('Ready');
+          sh.getRange(r, COL.NowPulling).setValue('');
+          if (!sh.getRange(r, COL.t_pulling).getValue()) sh.getRange(r, COL.t_pulling).setValue(tWhen);
+        }
+      } else if (body.field === 'pickup') {
+        sh.getRange(r, COL.PickupAt).setValue(tWhen);
+        if (tWhen) {
+          stampStage(sh, r, 'ready', tWhen);            // backfill received→ready if missing
+          sh.getRange(r, COL.t_done).setValue(tWhen);
+          sh.getRange(r, COL.Status).setValue('Done');
+          sh.getRange(r, COL.NowPulling).setValue('');
+          archiveRow(sh, r);
+        } else if (normStatus(sh.getRange(r, COL.Status).getValue()) === 'done') {
+          sh.getRange(r, COL.Status).setValue('Ready');  // undo an accidental collection
+          sh.getRange(r, COL.t_done).setValue('');
+        }
+      } else {
+        return { error:'bad field' };
+      }
+      return null;
+    case 'togglePull':
+      r = rowByOrderId(sh, body.orderId); if (!r) return { error:'not found' };
+      if (truthy(body.on)) {
+        if (countPulling(sh) >= MAX_PULLING && !sh.getRange(r, COL.NowPulling).getValue())
+          return { error:'max', message:'Max ' + MAX_PULLING + ' being pulled' };
+        sh.getRange(r, COL.NowPulling).setValue('TRUE');
+        bootstrapRow(sh, r, now);
+        sh.getRange(r, COL.Status).setValue('Pulling');
+        stampStage(sh, r, 'pulling', now);
+      } else {
+        sh.getRange(r, COL.NowPulling).setValue('');
+      }
+      return null;
+    case 'checkIn':
+      r = rowByOrderId(sh, body.orderId); if (!r) return { error:'not found' };
+      bootstrapRow(sh, r, now);
+      sh.getRange(r, COL.CheckedInAt).setValue(now);
+      return null;
+    case 'reorder':
+      var ids = body.orderIds || [];
+      for (var i = 0; i < ids.length; i++) {
+        var rr = rowByOrderId(sh, ids[i]);
+        if (rr) sh.getRange(rr, COL.QueuePos).setValue(i + 1);
+      }
+      return null;
+    case 'quickAdd':
+      var nr = sh.getLastRow() + 1;
+      sh.getRange(nr, COL.Customer).setValue(String(body.customer || '').trim());
+      if (body.addons) {
+        var a = body.addons;
+        if (a[0]) sh.getRange(nr, COL.Addon1).setValue(a[0]);
+        if (a[1]) sh.getRange(nr, COL.Addon2).setValue(a[1]);
+        if (a[2]) sh.getRange(nr, COL.Addon3).setValue(a[2]);
+      }
+      sh.getRange(nr, COL.Status).setValue('Received');
+      sh.getRange(nr, COL.Created).setValue(now);
+      sh.getRange(nr, COL.t_received).setValue(now);
+      sh.getRange(nr, COL.CheckedInAt).setValue(now);
+      sh.getRange(nr, COL.OrderID).setValue(makeOrderId(now, nr));
+      sh.getRange(nr, COL.QueuePos).setValue(0);    // new walk-in to the front
+      return null;
+    default:
+      return { error:'unknown action' };
   }
 }
 
