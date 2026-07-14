@@ -609,6 +609,27 @@
     ]).then(function (r) { return { api: r[0], csv: r[1] }; });
   }
 
+  /* Probe whether the server will accept WRITES from Control / Check-in,
+     without changing any data. A status write to a non-existent order only
+     returns "not found" AFTER the token + PIN checks pass, so the error code
+     tells us precisely what (if anything) is wrong. */
+  function testWrite() {
+    var cfg = getConfig();
+    if (!cfg.url) return Promise.resolve({ ok: false, reason: 'no-url', msg: 'No Web App URL — Control & Check-in can’t save (the sheet feed is read-only).' });
+    return post('setStatus', { orderId: '__om_healthcheck__', status: 'Received' })
+      .then(function () { return { ok: true, msg: 'Writes authorized — Control & Check-in can save.' }; })
+      .catch(function (err) {
+        var c = (err && err.code) || '';
+        if (c === 'not found' || c === 'not_found' || c === 'unknown action')
+          return { ok: true, msg: 'Writes authorized — token + PIN accepted.' };
+        if (c === 'token')
+          return { ok: false, reason: 'token', msg: 'Server rejected the API token — set OM_API_TOKEN in Vercel to match the script’s API_TOKEN.' };
+        if (c === 'pin')
+          return { ok: false, reason: 'pin', msg: 'Server rejected the staff PIN — the sheet’s PIN isn’t the one this app uses. Update it with Set PIN below.' };
+        return { ok: false, reason: 'other', msg: (err && err.message) || 'Write probe failed.' };
+      });
+  }
+
   /* ── Header clock (shared) ───────────────────────────────── */
   /* Fleet-TZ + server-synced, so every screen agrees on the time.
      dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); else "Thu, Jun 25". */
@@ -636,6 +657,7 @@
     fetchData: fetchData,
     post: post,
     testSources: testSources,
+    testWrite: testWrite,
     startPolling: startPolling,
     startClock: startClock,
     kiosk: kiosk,

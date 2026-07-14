@@ -26,6 +26,14 @@
     #ns-name { font-family: var(--f-head); font-size: clamp(44px, 7vw, 92px); font-weight: 900; text-align: center; line-height: 1; text-transform: uppercase; letter-spacing: 1px; word-break: break-word; }
     #ns-name.pop { animation: pop .4s ease-out; }
     @keyframes pop { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: none; } }
+    /* Attention flash when a new name goes Ready (paired with a chime). */
+    .ns.flash { animation: nsflash 1.5s ease-out; }
+    @keyframes nsflash {
+      0%   { background: linear-gradient(160deg, #fff 60%, #F6FBF0 100%); }
+      12%  { background: var(--olive-l); box-shadow: inset 0 0 0 5px var(--olive-m); }
+      100% { background: linear-gradient(160deg, #fff 60%, #F6FBF0 100%); box-shadow: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .ns.flash { animation: none; } #ns-name.pop { animation: none; } }
     .ns-ready-tag { margin-top: 24px; display: inline-flex; align-items: center; gap: 8px; background: var(--olive); color: #fff; padding: 10px 28px; border-radius: 5px; font-family: var(--f-head); font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
     .ns-empty { text-align: center; }
     .ns-empty .eicon { font-size: 52px; opacity: .2; margin-bottom: 20px; }
