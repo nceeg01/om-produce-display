@@ -23,7 +23,8 @@
 
   function write(action, payload, optimistic) {
     if (optimistic) { optimistic(); render(); }
-    OM.post(action, payload).then(applySnapshot)
+    OM.post(action, payload)
+      .then(function (res) { OMUI.clearBanner(); applySnapshot(res); })
       .catch(function (err) { OMUI.handleWriteError(err, function () { poller && poller.reload(); }); if (poller) poller.reload(); });
   }
 
@@ -124,6 +125,7 @@
     function done() { btn.disabled = false; btn.textContent = '+ Add & Check In'; }
     OM.post('quickAdd', { customer: name, addons: addon ? [addon] : [] })
       .then(function (res) {
+        OMUI.clearBanner();
         document.getElementById('qa-name').value = '';
         document.getElementById('qa-addon').value = '';
         applySnapshot(res); OMUI.toast(name + ' added', 'ok'); done();
@@ -142,7 +144,7 @@
       onData: function (res) {
         setLive('', 'LIVE');
         document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(OM.effectiveNow()) +
-          (res.source === 'csv' ? ' · sheet feed (writes still live)' : '');
+          (res.source === 'csv' ? ' · reading sheet feed — updates may not save' : '');
         applySnapshot(res);
       },
       onError: function (err) { setLive('err', 'ERR'); document.getElementById('last-upd').textContent = (err && err.message) || 'Sync failed'; },
