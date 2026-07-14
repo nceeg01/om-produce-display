@@ -473,7 +473,15 @@
   /* ── Write API (doPost; text/plain to avoid CORS preflight) ── */
   /* post('setStatus', {orderId, status}) → resolves to { orders, serverNow }
      In DEMO mode (nothing configured) it mutates the in-memory sample.
-     Writes always need the Web App — the CSV feed is read-only. */
+     Writes always need the Web App — the CSV feed is read-only.
+
+     Transport: a fetch() POST first (so a reachable server's ok:false —
+     bad token / PIN — comes back as a proper error we can act on). If the
+     POST itself can't complete — Apps Script often blocks cross-origin
+     fetch writes, which Safari reports as "Load failed" — we retry the same
+     write over JSONP (a <script> GET carrying the request JSON in `data`),
+     which is NOT subject to CORS. That is what actually lets the iPad save
+     to the sheet. */
   function post(action, payload) {
     var cfg = getConfig();
     payload = payload || {};
@@ -482,20 +490,37 @@
       return Promise.reject(new Error('Writes need the Apps Script Web App URL (see Settings) — the sheet feed is read-only.'));
     }
     var body = Object.assign({ action: action, key: cfg.token, pin: cfg.pin }, payload);
+
+    function handleWriteData(data) {
+      if (!data || data.ok === false) {
+        var e = new Error((data && data.message) || (data && data.error) || 'Write failed');
+        e.code = data && data.error;
+        throw e;
+      }
+      setServerNow(data.serverNow);
+      return { orders: (data.orders || []).map(normOrder), serverNow: data.serverNow };
+    }
+
+    function jsonpWrite() {
+      var sep = cfg.url.indexOf('?') >= 0 ? '&' : '?';
+      var url = cfg.url + sep + 'data=' + encodeURIComponent(JSON.stringify(body)) + '&_=' + Date.now();
+      return jsonp(url).then(handleWriteData);
+    }
+
     return fetch(cfg.url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // simple request → no preflight
       body: JSON.stringify(body),
     })
       .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data || data.ok === false) {
-          var e = new Error((data && data.message) || (data && data.error) || 'Write failed');
-          e.code = data && data.error;
-          throw e;
-        }
-        setServerNow(data.serverNow);
-        return { orders: (data.orders || []).map(normOrder), serverNow: data.serverNow };
+      .then(handleWriteData)
+      .catch(function (err) {
+        // A server that answered ok:false already has a .code — that's a real
+        // decision (token/pin/…), don't paper over it with a retry.
+        if (err && err.code) throw err;
+        // Otherwise the POST never completed (CORS/redirect/network). Retry
+        // over JSONP so the write still reaches the sheet.
+        return jsonpWrite();
       });
   }
 

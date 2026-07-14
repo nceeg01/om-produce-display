@@ -113,9 +113,19 @@
         'err', { actionLabel: 'Open Settings', actionHref: 'index.html' });
     } else if (code === 'max') {
       toast(err.message || 'Limit reached', 'err');
+    } else if (isUnreachable(err)) {
+      // Neither the fetch POST nor the JSONP write could reach the Web App —
+      // almost always a deployment problem, not the data.
+      banner('Couldn’t reach the Apps Script to save. Re-deploy the Web App with the latest Code.gs — Execute as: Me, Who has access: Anyone.',
+        'err', { actionLabel: 'Open Settings', actionHref: 'index.html' });
     } else {
       toast((err && err.message) || 'Action failed — not saved', 'err');
     }
+  }
+
+  function isUnreachable(err) {
+    var m = (err && err.message) || '';
+    return /Load failed|Failed to fetch|NetworkError|JSONP|timeout/i.test(m);
   }
 
   function promptPin(reloadFn) {
