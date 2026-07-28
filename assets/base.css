@@ -19,16 +19,10 @@ body {
   padding: 6px 28px; box-shadow: 0 1px 0 var(--border);
 }
 .logo-wrap { display: flex; align-items: center; gap: 11px; }
-.logo-sq {
-  width: 36px; height: 36px; background: var(--orange); border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--f-head); font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -1px;
+.logo-img {
+  height: 44px; width: auto; max-width: 240px;
+  object-fit: contain; display: block;
 }
-.logo-name {
-  font-family: var(--f-head); font-size: 22px; font-weight: 800;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--text);
-}
-.logo-name em { color: var(--orange); font-style: normal; }
 .screen-tag {
   font-family: var(--f-head); font-size: 12px; font-weight: 700;
   letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
@@ -146,7 +140,7 @@ body {
 
 @media (max-width: 768px) {
   .topbar { padding: 4px 14px; min-height: 56px; gap: 10px; }
-  .logo-name { font-size: 18px; }
+  .logo-img { height: 34px; max-width: 170px; }
   .clock { font-size: 22px; }
   .screen-tag { display: none; }
 }
