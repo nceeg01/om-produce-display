@@ -22,8 +22,18 @@
    ============================================================ */
 window.OM_CONFIG = {
   /* Permanent connection (baked — authoritative when non-empty) */
-  WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzKVwltLNlvAXf39Jh5_L-j_G9dMgqH-OY97K7D59KbY94S4vuRC53Wg45RG9CYgGTw9w/exec',
-  CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrvObxcc20khZyWSnc8D4svHjN16_uFafEbSm_YG_PangAVIoz-eo9Yj4EGLBaA56y8IuA4llwqr8U/pub?gid=1533423010&single=true&output=csv',
+  /* ── AIRTABLE TEST BRANCH ────────────────────────────────────
+     Reads AND writes go to the same-origin Vercel serverless
+     function /api/orders, which is a drop-in replacement for the
+     Apps Script Web App backed by an Airtable base — see
+     docs/AIRTABLE_SETUP.md. CSV_URL is intentionally blank so a
+     misconfigured Airtable fails loudly instead of silently
+     showing stale Google Sheet data. To switch back to Sheets,
+     restore the two commented values below. */
+  WEB_APP_URL: '/api/orders',
+  // WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzKVwltLNlvAXf39Jh5_L-j_G9dMgqH-OY97K7D59KbY94S4vuRC53Wg45RG9CYgGTw9w/exec',
+  CSV_URL: '',
+  // CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrvObxcc20khZyWSnc8D4svHjN16_uFafEbSm_YG_PangAVIoz-eo9Yj4EGLBaA56y8IuA4llwqr8U/pub?gid=1533423010&single=true&output=csv',
   TOKEN: '',                 // injected at deploy from Vercel env (assets/env.js)
   DEFAULT_PIN: '9020',       // staff PIN for /control + /checkin (auto-unlock, no prompt)
 
