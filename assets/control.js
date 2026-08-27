@@ -11,6 +11,7 @@
   'use strict';
   var cfg = getConfig();
   var orders = [];
+  var byId = {};                                 // orderId → order, for in-place ticks
   var poller = null;
   var filter = 'all';
   var EST_MIN = 0, EST_MAX = 60, EST_STEP = 5;   // 5-minute estimate increments
@@ -31,6 +32,8 @@
 
   function applySnapshot(res) {
     orders = res.orders;
+    byId = {};
+    orders.forEach(function (o) { byId[o.id] = o; });
     document.getElementById('demo').style.display = res.demo ? '' : 'none';
     render();
   }
@@ -38,7 +41,7 @@
   function write(action, payload, optimistic) {
     if (optimistic) { optimistic(); render(); }      // instant feedback
     OM.post(action, payload)
-      .then(applySnapshot)
+      .then(function (res) { OMUI.clearBanner(); applySnapshot(res); })   // write really saved
       .catch(function (err) { OMUI.handleWriteError(err, function () { poller && poller.reload(); }); if (poller) poller.reload(); });
   }
 
@@ -74,6 +77,7 @@
 
   function card(o) {
     var c = el('div', 'ctl-card ' + o.status + (o.nowPulling ? ' pull-on' : ''));
+    c.setAttribute('data-id', o.id);
 
     // ── identity: customer, status, arrival, live timers ──
     var idc = el('div', 'cc-id');
@@ -84,11 +88,11 @@
     if (o.checkedInAt) meta.appendChild(el('span', 'cc-arr', '✓ here ' + OM.fmtTime(o.checkedInAt)));
     if (o.status === 'pulling' && o.t.pulling) {
       var stale = OM.pullElapsedMs(o) > cfg.stalePullMin * 60000;
-      meta.appendChild(el('span', 'cc-elapsed' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o))));
+      meta.appendChild(el('span', 'cc-elapsed cc-pull-timer' + (stale ? ' warn' : ''), '⏱ ' + OM.fmtDuration(OM.pullElapsedMs(o))));
     }
     var readyMs = OM.readyElapsedMs(o);
     if (readyMs > 60000) {
-      meta.appendChild(el('span', 'cc-elapsed' + (readyMs > cfg.staleReadyMin * 60000 ? ' warn' : ''), '✓ ready ' + OM.fmtDuration(readyMs)));
+      meta.appendChild(el('span', 'cc-elapsed cc-ready-timer' + (readyMs > cfg.staleReadyMin * 60000 ? ' warn' : ''), '✓ ready ' + OM.fmtDuration(readyMs)));
     }
     idc.appendChild(meta);
     if (o.addons.length) {
@@ -187,14 +191,22 @@
     return s;
   }
 
-  // Advance the live pull timer each second — but never re-render (and tear down)
-  // while a native time picker is open (the input holds focus while editing).
-  setInterval(function () {
-    if (!orders.length) return;
-    var a = document.activeElement;
-    if (a && a.tagName === 'INPUT') return;
-    render();
-  }, 1000);
+  // Advance the live pull/ready timers each second by updating ONLY their text
+  // in place. We deliberately do NOT rebuild the board here: tearing cards down
+  // every second on an iPad can swallow a tap landing mid-rebuild, and it would
+  // also close an open time picker. Full re-render happens on data/filter change.
+  function tickTimers() {
+    var cards = document.querySelectorAll('.ctl-card');
+    for (var i = 0; i < cards.length; i++) {
+      var o = byId[cards[i].getAttribute('data-id')];
+      if (!o) continue;
+      var pt = cards[i].querySelector('.cc-pull-timer');
+      if (pt) { var pm = OM.pullElapsedMs(o); pt.textContent = '⏱ ' + OM.fmtDuration(pm); pt.classList.toggle('warn', pm > cfg.stalePullMin * 60000); }
+      var rt = cards[i].querySelector('.cc-ready-timer');
+      if (rt) { var rm = OM.readyElapsedMs(o); rt.textContent = '✓ ready ' + OM.fmtDuration(rm); rt.classList.toggle('warn', rm > cfg.staleReadyMin * 60000); }
+    }
+  }
+  setInterval(tickTimers, 1000);
 
   function start() {
     document.querySelectorAll('.chip[data-f]').forEach(function (chipEl) {
@@ -211,7 +223,7 @@
       onData: function (res) {
         setLive('', 'LIVE');
         document.getElementById('last-upd').textContent = 'Synced ' + OM.fmtTime(OM.effectiveNow()) +
-          (res.source === 'csv' ? ' · sheet feed (writes still live)' : '');
+          (res.source === 'csv' ? ' · reading sheet feed — updates may not save' : '');
         applySnapshot(res);
       },
       onError: function (err) { setLive('err', 'ERR'); document.getElementById('last-upd').textContent = (err && err.message) || 'Sync failed'; },

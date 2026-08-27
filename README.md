@@ -27,12 +27,14 @@ Google Sheet ──┬─(Apps Script Web App — token JSON, read+write)──�
 | `/` | Admin | Preview + setup guide (connection is now baked in — see below) |
 | `/control` | **Warehouse iPad** | **One big tap per stage** (▶ Start Pulling → ✓ Done Pulling → 📦 Picked Up) + ±boxes, ±5-min estimate, editable **Start/End/Pickup** time chips, tap-to-filter counters. Auto-unlocks. |
 | `/checkin` | **Sales window (op3)** | **Mark arrivals, reorder the queue, quick-add walk-ins, record customer pickup time.** Auto-unlocks. |
-| `/warehouse` | Warehouse TV | Orders by stage, boxes, addons, live pull timers, "Now Pulling" strip, stale alerts |
+| `/warehouse` | Warehouse TV | Pickup-style two-panel: **Now Pulling** (live timers) + a **rotating all-details queue** (≤10/page, 5s) with boxes, add-ons, arrival, ETA/ready-age |
 | `/pickup` | Customer TV | "Now Ready" hero + **rotating queue (≤10 / page, auto-advances every 5s)** with per-line ETAs (customer **name** only) |
 | `/window` | Sales desk TV | What to invoice **now** + what's coming up, with arrival times |
 | `/analytics` | Manager | Pull times, throughput by hour, boxes/hour, slowest orders |
 
-**Interactive vs display:** `/control` and `/checkin` write back to the sheet (via the Apps Script `doPost`, gated by the API token + a staff PIN). All other pages are read-only displays. TVs still need no Google login.
+**Interactive vs display:** `/control` and `/checkin` write back to the sheet (gated by the API token + a staff PIN). All other pages are read-only displays. TVs still need no Google login.
+
+**Write transport (CORS-proof).** A browser `fetch()` POST to an Apps Script `/exec` is frequently blocked by CORS — Safari reports it as **"Load failed"** — which silently drops every edit. So writes try the POST first (for clean error reporting) and, if it can't complete, **retry over JSONP** (a `<script>` GET carrying the request as `data=…`), which isn't subject to CORS. The Apps Script handles that in `doGet`, so **you must deploy the latest `apps-script/Code.gs`** for saving to work. The Web App must be deployed **Execute as: Me** (an editor) and **Who has access: Anyone**.
 
 ## Roles & access (private sheet)
 

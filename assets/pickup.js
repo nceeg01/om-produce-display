@@ -25,6 +25,46 @@
   // "ready" + "invoiced" are both collectable from the customer's POV.
   function isReady(o) { return o.status === 'ready' || o.status === 'invoiced'; }
 
+  /* ── "Now Ready" attention cue ────────────────────────────────
+     When a NEW name lands in the hero (not on first load), flash the panel
+     and play a short chime. TVs are often muted and browsers block audio
+     until a user gesture, so the chime unlocks on the first interaction and
+     silently no-ops otherwise — the visual flash always works. */
+  var hadFirstData = false, audioCtx = null, audioReady = false;
+  function unlockAudio() {
+    if (audioReady) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = audioCtx || new AC();
+      if (audioCtx.resume) audioCtx.resume();
+      audioReady = audioCtx.state === 'running';
+    } catch (e) {}
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+    window.addEventListener(ev, unlockAudio, { passive: true });
+  });
+  function chime() {
+    if (!audioReady || !audioCtx) return;
+    try {
+      var t = audioCtx.currentTime;
+      [[784, 0], [1047, 0.16]].forEach(function (n) {   // G5 → C6, gentle two-tone
+        var osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = n[0];
+        g.gain.setValueAtTime(0.0001, t + n[1]);
+        g.gain.exponentialRampToValueAtTime(0.22, t + n[1] + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + 0.5);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(t + n[1]); osc.stop(t + n[1] + 0.55);
+      });
+    } catch (e) {}
+  }
+  function cueReady() {
+    var ns = document.querySelector('.ns');
+    if (ns) { ns.classList.remove('flash'); void ns.offsetWidth; ns.classList.add('flash'); }
+    chime();
+  }
+
   // Per-line status/ETA shown on the same row as the customer.
   // "~7 min" reads as "Ready in ~7 min"; "Any moment" stands on its own.
   function etaLabel(e, fallback) {
@@ -56,6 +96,7 @@
     if (changed) name.className = 'pop';
     box.appendChild(name);
     box.appendChild(el('div', 'ns-ready-tag', '✓ Ready for Pickup'));
+    if (changed && hadFirstData) cueReady();   // new arrival at the counter (not first paint)
   }
 
   function qitem(o, pos) {
@@ -105,6 +146,7 @@
     }
     v.slice.forEach(function (o, i) { list.appendChild(qitem(o, v.start + i + 1)); });
     renderPageInd(v);
+    hadFirstData = true;   // subsequent hero changes are real new arrivals → cue
   }
 
   // "Now Preparing" banner — names the warehouse flagged (≤3), public-safe.

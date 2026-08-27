@@ -28,21 +28,31 @@
     runTests();
   }
 
-  /* Probe both sources and paint the per-source + overall status. */
+  /* Probe both read sources + the write path; paint each row + overall status. */
   function runTests() {
     setSrc('api', false, 'testing…');
     setSrc('csv', false, 'testing…');
-    return OM.testSources().then(function (r) {
+    setSrc('write', false, 'testing…');
+    var sources = OM.testSources().then(function (r) {
       setSrc('api', r.api.ok, r.api.ok
-        ? '✓ Connected — ' + r.api.count + ' orders (live reads + writes)'
-        : '✗ ' + (r.api.error || 'Failed') + ' — screens fall back to the sheet feed; writes need this fixed (usually the API token)');
+        ? '✓ Connected — ' + r.api.count + ' orders (live read)'
+        : '✗ ' + (r.api.error || 'Failed') + ' — screens fall back to the sheet feed');
       setSrc('csv', r.csv.ok, r.csv.ok
         ? '✓ Connected — ' + r.csv.count + ' rows (fallback ready, ~1 min behind)'
         : '✗ ' + (r.csv.error || 'Failed') + ' — re-publish the ORDERS tab as CSV if this persists');
-      if (r.api.ok) setStatus(true, 'Connected — live Web App feed. Displays and staff pages are fully operational.');
-      else if (r.csv.ok) setStatus(true, 'Connected via the published sheet feed — displays work; writes from Control/Check-in need the Web App (token).');
-      else setStatus(false, 'No data source reachable — check the links below and your network.');
       return r;
+    });
+    var writes = OM.testWrite().then(function (w) {
+      setSrc('write', w.ok, (w.ok ? '✓ ' : '✗ ') + w.msg);
+      return w;
+    });
+    return Promise.all([sources, writes]).then(function (res) {
+      var r = res[0], w = res[1];
+      if (r.api.ok && w.ok) setStatus(true, 'Fully operational — live feed, and Control/Check-in can save.');
+      else if (w.ok) setStatus(true, 'Operational — staff pages can save; live read is on the sheet-feed fallback.');
+      else if (r.api.ok || r.csv.ok) setStatus(false, 'Displays work, but staff CANNOT save changes: ' + w.msg);
+      else setStatus(false, 'No data source reachable — check the links below and your network.');
+      return { api: r.api, csv: r.csv, write: w };
     });
   }
 
