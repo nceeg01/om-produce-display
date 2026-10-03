@@ -611,13 +611,17 @@
 
   /* ── Header clock (shared) ───────────────────────────────── */
   /* Fleet-TZ + server-synced, so every screen agrees on the time.
+     12-hour format: "3:55 PM".
      dateStyle: 'dmy' → "25/06/26" (Customer Pickup TV); else "Thu, Jun 25". */
   var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function startClock(clockEl, dateEl, dateStyle) {
     startClockSync();
     function t() {
       var p = tzParts(effectiveNow());
-      if (clockEl) clockEl.textContent = pad(p.h) + ':' + pad(p.mi);
+      if (clockEl) {
+        clockEl.innerHTML = (p.h % 12 || 12) + ':' + pad(p.mi) +
+          '<span class="ampm">' + (p.h >= 12 ? 'PM' : 'AM') + '</span>';
+      }
       if (dateEl) {
         dateEl.textContent = dateStyle === 'dmy'
           ? pad(p.d) + '/' + pad(p.mo) + '/' + String(p.y).slice(-2)
