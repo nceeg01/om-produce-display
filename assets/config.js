@@ -26,9 +26,8 @@ window.OM_CONFIG = {
   CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrvObxcc20khZyWSnc8D4svHjN16_uFafEbSm_YG_PangAVIoz-eo9Yj4EGLBaA56y8IuA4llwqr8U/pub?gid=1533423010&single=true&output=csv',
   TOKEN: '',                 // injected at deploy from Vercel env (assets/env.js)
 
-  /* Order Pulling Dashboard (/order-pulling-dashboard) — its own published
-     sheet tab (CSV, read-only). Columns are auto-detected from the header
-     row, so the sheet layout can change without a code change. */
+  /* Employee Scorecard TV (/order-pulling-dashboard) — its own published
+     sheet tab (CSV, read-only), displayed exactly as the sheet has it. */
   PULL_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSdNXmMiVAYRBZ1Iaqwc04moSpNmizQOzriKCtXmBDskM3zTmPr1earT8qX4uOBo05mmk-UUK7vgdtV/pub?gid=1550056368&single=true&output=csv',
   DEFAULT_PIN: '9020',       // staff PIN for /control + /checkin (auto-unlock, no prompt)
 
