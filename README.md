@@ -127,8 +127,9 @@ dev. To re-point the fleet permanently, edit the constants at the top of `config
 
 Shows the published **EMPLOYEE SCORECARD** tab (`PULL_CSV_URL` in `assets/config.js`;
 override with the `OM_PULL_CSV_URL` env var) **as is**: the sheet's title, headers, values
-and row order, nothing added. The table starts at the first row with 3+ filled cells and
-ends at the first blank row; columns added in the sheet show up automatically.
+and row order, nothing added. The tab holds two tables (a **TOTALS** block on top, then the
+**EMPLOYEE SCORECARD**); the screen splits them at their header rows and shows only the
+per-employee table. Columns added in the sheet show up automatically.
 
 - **Productive Util %** (any header containing "Util" or "%") is coloured like the sheet:
   ≥ 70% green · ≥ 50% yellow · below red (override with `?good=70&warn=50`).
