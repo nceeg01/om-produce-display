@@ -131,7 +131,9 @@ and row order, nothing added. The tab holds two tables (a **TOTALS** block on to
 **EMPLOYEE SCORECARD**); the screen splits them at their header rows and shows only the
 per-employee table. Columns added in the sheet show up automatically.
 
-- **Productive Util %** (any header containing "Util" or "%") is coloured like the sheet:
+- Rows are **ranked by Cases, most first** (`?sort=<column>`, `&dir=asc`, or `?sort=none`
+  for the sheet's own order).
+- **Productive Util %** (any header containing "Util") is coloured like the sheet:
   ≥ 70% green · ≥ 50% yellow · below red (override with `?good=70&warn=50`).
 - Rows and text scale so every employee fits the TV; if the list ever outgrows the screen
   it pages every 10s. Refreshes every `REFRESH_TV` seconds (only re-draws when the data changed).
