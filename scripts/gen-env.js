@@ -8,7 +8,7 @@
      OM_API_TOKEN   → window.OM_ENV.TOKEN        (the Apps Script doGet/doPost key)
      OM_WEBAPP_URL  → window.OM_ENV.WEB_APP_URL  (override the baked URL, if ever needed)
      OM_CSV_URL     → window.OM_ENV.CSV_URL      (override the baked published-CSV feed)
-     OM_PULL_CSV_URL → window.OM_ENV.PULL_CSV_URL (override the Order Pulling Dashboard feed)
+     OM_PULL_CSV_URL → window.OM_ENV.PULL_CSV_URL (override the Employee Scorecard feed)
      OM_STAFF_PIN   → window.OM_ENV.DEFAULT_PIN  (override the baked staff PIN)
      OM_TIMEZONE    → window.OM_ENV.TIMEZONE     (override the fleet timezone)
    ============================================================ */

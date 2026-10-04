@@ -656,7 +656,6 @@
     fmtDate: fmtDate,
     msToHHMM: msToHHMM,
     hhmmToMs: hhmmToMs,
-    wallToEpoch: wallToEpoch,
     parseCsv: parseCsv,
     fetchWithTimeout: fetchWithTimeout,
     toInt: toInt,

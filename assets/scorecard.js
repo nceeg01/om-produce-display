@@ -1,0 +1,267 @@
+/* ============================================================
+   OM Produce — Employee Scorecard (warehouse TV, /order-pulling-dashboard)
+   ------------------------------------------------------------
+   Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL) exactly as
+   the sheet has it: same title, headers, values and row order — nothing
+   added. The only styling rule is the sheet's colour scale on the
+   utilisation column (header containing "Util" or "%"):
+       ≥ 70% green · ≥ 50% yellow · below red      (?good=70&warn=50)
+   Rows and font scale so the whole table fits the TV; if it ever can't
+   fit, it pages every 10s. ?demo=1 shows sample data.
+   ============================================================ */
+(function () {
+  'use strict';
+  var cfg = getConfig();
+  var qs = new URLSearchParams(location.search);
+  var CSV_URL = (qs.get('csv') || cfg.pullCsvUrl || '').trim();
+  var DEMO = qs.get('demo') === '1' || !CSV_URL;
+  var GOOD = num(qs.get('good'), 70);
+  var WARN = num(qs.get('warn'), 50);
+  var REFRESH_MS = (cfg.refreshTv || 10) * 1000;
+  var ROTATE_MS = 10000;
+  var MIN_ROW_VH = 0.028;      // smallest row before paging (~30px on a 1080p TV)
+
+  OM.kiosk();
+
+  var wrap = document.getElementById('wrap');
+  var note = document.getElementById('note');
+  var titleEl = document.getElementById('title');
+  var table = null, lastText = null, model = null, page = 0, pageSize = 0, lastOk = 0;
+
+  function num(v, d) { var n = parseFloat(v); return isNaN(n) ? d : n; }
+  function str(v) { return v == null ? '' : String(v).trim(); }
+  function filled(row) { return row.filter(function (c) { return str(c); }).length; }
+  function el(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+  }
+
+  /* ── CSV → { title, head, rows, kinds } ──────────────────── */
+  var NUM_RE = /^[-+$]?\s*[\d,]*\.?\d+\s*%?$/;
+
+  function toModel(text) {
+    var rows = OM.parseCsv(text);
+    // Header = first row with ≥3 filled cells; a single-cell row above it is the title.
+    var hi = -1, title = '';
+    for (var i = 0; i < Math.min(rows.length, 20); i++) {
+      var f = filled(rows[i]);
+      if (f >= 3) { hi = i; break; }
+      if (f === 1) title = str(rows[i].filter(function (c) { return str(c); })[0]);
+    }
+    if (hi < 0) return null;
+    var head = rows[hi].map(str);
+    // Data runs until the first blank row after it starts (the table's end).
+    var data = [];
+    for (var r = hi + 1; r < rows.length; r++) {
+      if (!filled(rows[r])) { if (data.length) break; continue; }
+      data.push(rows[r].map(str));
+    }
+    // Keep columns that have a header or any value.
+    var cols = [];
+    for (var c = 0; c < head.length; c++) {
+      if (head[c] || data.some(function (row) { return row[c]; })) cols.push(c);
+    }
+    var kinds = cols.map(function (c, k) {
+      if (k === 0) return 'first';
+      var vals = data.map(function (row) { return row[c] || ''; }).filter(Boolean);
+      var nums = vals.filter(function (v) { return NUM_RE.test(v); });
+      if (!vals.length || nums.length / vals.length < 0.6) return 'text';
+      if (/util/i.test(head[c]) || /%/.test(head[c]) || nums.every(function (v) { return /%$/.test(v); })) return 'pct';
+      // Small whole numbers (stops, mistakes) sit centred; amounts align right.
+      return nums.every(function (v) { return /^\d{1,3}$/.test(v); }) ? 'int' : 'num';
+    });
+    return {
+      title: title,
+      head: cols.map(function (c) { return head[c]; }),
+      rows: data.map(function (row) { return cols.map(function (c) { return row[c] || ''; }); }),
+      kinds: kinds,
+    };
+  }
+
+  function tone(v) {
+    var s = str(v);
+    if (!s) return '';
+    var n = parseFloat(s.replace(/[^\d.\-]/g, ''));
+    if (isNaN(n)) return '';
+    if (!/%/.test(s) && Math.abs(n) <= 1.5) n *= 100;   // 0.745 → 74.5%
+    return n >= GOOD ? 'good' : n >= WARN ? 'warn' : 'bad';
+  }
+
+  /* ── Render ──────────────────────────────────────────────── */
+  function render() {
+    if (!model) return;
+    titleEl.textContent = model.title || 'Employee Scorecard';
+    document.title = (model.title || 'Employee Scorecard') + ' — OM Produce';
+
+    if (!model.rows.length) {
+      wrap.innerHTML = '';
+      var m = el('div', 'msg');
+      m.appendChild(el('b', null, 'No rows on the scorecard yet'));
+      wrap.appendChild(m);
+      table = null;
+      return;
+    }
+
+    table = el('table');
+    // Name column 1.7× the width of each data column.
+    var cg = el('colgroup'), total = 1.7 + (model.head.length - 1);
+    model.head.forEach(function (h, k) {
+      var col = el('col');
+      col.style.width = ((k === 0 ? 1.7 : 1) / total * 100) + '%';
+      cg.appendChild(col);
+    });
+    table.appendChild(cg);
+
+    var thead = el('thead'), htr = el('tr');
+    model.head.forEach(function (h) { htr.appendChild(el('th', null, h)); });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+    table.appendChild(el('tbody'));
+
+    wrap.innerHTML = '';
+    wrap.appendChild(table);
+    paginate();
+    fillPage();
+  }
+
+  function fillPage() {
+    if (!table) return;
+    var tb = table.tBodies[0];
+    tb.innerHTML = '';
+    var start = page * pageSize;
+    model.rows.slice(start, start + pageSize).forEach(function (row) {
+      var tr = el('tr');
+      row.forEach(function (v, k) {
+        var kind = model.kinds[k];
+        var td = el('td', kind === 'first' ? 'first' : kind === 'num' ? 'num' : kind === 'pct' ? 'pct' : '', v);
+        if (kind === 'pct') { var t = tone(v); if (t) td.className += ' ' + t; }
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    fit();
+    pageNote();
+  }
+
+  function pageNote() {
+    if (note.classList.contains('err') || !model) return;
+    var pages = pageSize ? Math.ceil(model.rows.length / pageSize) : 1;
+    note.textContent = pages > 1 ? 'Page ' + (page + 1) + ' of ' + pages : '';
+  }
+
+  function narrow() { return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
+
+  /* How many rows per page: all of them unless rows would get too small,
+     then the fewest equal pages that keep rows ≥ MIN_ROW_PX. */
+  function paginate() {
+    var n = model.rows.length;
+    if (narrow()) { pageSize = n; page = 0; return; }
+    var avail = wrap.clientHeight - Math.max(40, wrap.clientHeight * 0.07);
+    var fits = Math.max(1, Math.floor(avail / Math.max(22, window.innerHeight * MIN_ROW_VH)));
+    var pages = Math.ceil(n / fits);
+    pageSize = Math.ceil(n / pages);
+    if (page * pageSize >= n) page = 0;
+  }
+
+  /* Size font + row height so header + this page's rows fill the space. */
+  function fit() {
+    if (!table) return;
+    var trs = table.tBodies[0].rows;
+    if (narrow()) {
+      table.style.fontSize = '';
+      Array.prototype.forEach.call(trs, function (tr) { tr.style.height = ''; });
+      return;
+    }
+    var H = wrap.clientHeight, n = Math.max(trs.length, 1);
+    var fs = Math.max(11, Math.min(36, H / (n + 2.4) * 0.58));
+    for (var pass = 0; pass < 2; pass++) {
+      table.style.fontSize = fs + 'px';
+      var rowH = (H - table.tHead.offsetHeight - 2) / n;
+      Array.prototype.forEach.call(trs, function (tr) { tr.style.height = rowH + 'px'; });
+      fs = Math.max(11, Math.min(36, rowH * 0.58));
+    }
+  }
+
+  /* ── Load loop ───────────────────────────────────────────── */
+  var inflight = false;
+  function load() {
+    if (inflight) return;
+    inflight = true;
+    var p = DEMO ? Promise.resolve(demoCsv()) :
+      OM.fetchWithTimeout(CSV_URL + (CSV_URL.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now(), 12000, { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        });
+    p.then(function (text) {
+      if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('sheet is not published as CSV');
+      lastOk = Date.now();
+      note.classList.remove('err');
+      if (text === lastText && model) { pageNote(); return; }   // unchanged — no re-render
+      var m = toModel(text);
+      if (!m) throw new Error('no table found in the sheet');
+      lastText = text;
+      model = m;
+      render();
+    }).catch(function (err) {
+      var why = (err && err.name === 'AbortError') ? 'timed out' : ((err && err.message) || 'failed');
+      if (!model) {
+        wrap.innerHTML = '';
+        var m = el('div', 'msg');
+        m.appendChild(el('b', null, 'Can’t reach the scorecard sheet'));
+        m.appendChild(el('div', null, why + ' — retrying automatically'));
+        wrap.appendChild(m);
+      } else {
+        note.classList.add('err');
+        note.textContent = 'Sheet unreachable (' + why + ') — showing ' + OM.fmtTime(lastOk);
+      }
+    }).then(function () { inflight = false; });
+  }
+
+  setInterval(load, REFRESH_MS);
+  setInterval(function () {
+    if (!model || !pageSize || pageSize >= model.rows.length) return;
+    page = (page + 1) % Math.ceil(model.rows.length / pageSize);
+    fillPage();
+  }, ROTATE_MS);
+  window.addEventListener('resize', function () { if (model) { paginate(); fillPage(); } });
+  load();
+
+  /* ── Demo (?demo=1) — the scorecard as published ─────────── */
+  function demoCsv() {
+    return [
+      'EMPLOYEE SCORECARD,,,,,,,,',
+      'Employee,Shift,Cases,Stops,Payroll Hrs,Productive Hrs,Productive Util %,Cases / Payroll Hr,Mistakes (items)',
+      'YASNIEL,Day,"3,357",43,52.7,39.3,74.5%,63.7,13',
+      'JAIRO,Night,"3,307",38,49.7,38.6,77.7%,66.5,3',
+      'BERNARDO,Night,"3,520",44,54.1,43.8,81.0%,65.1,7',
+      'AMADEO,Night,"2,152",34,63.4,25.5,40.3%,34.0,17',
+      'FRANCISCO,Night,"3,866",47,55.0,42.0,76.3%,70.3,15',
+      'LUIS,Night,"3,732",41,53.6,43.9,81.8%,69.6,14',
+      'MARCOS,Night,"3,955",48,56.8,41.1,72.5%,69.7,26',
+      'CARLOS R,Night,"2,941",36,56.5,36.2,64.1%,52.1,37',
+      'BRYAN,Night,"1,822",29,22.0,21.6,98.3%,82.9,11',
+      'ULISES,Night,"3,187",45,53.0,39.0,73.6%,60.1,21',
+      'JOSE A.,Night,"1,709",31,52.6,20.4,38.8%,32.5,27',
+      'JACKSON,Night,"3,136",42,53.3,41.0,77.0%,58.9,4',
+      'CARLO,Night,"3,994",47,55.0,41.5,75.5%,72.7,13',
+      'EMILIANO,Night,"2,554",39,51.2,38.4,75.0%,49.9,6',
+      'MIGUEL Z,Night,"3,496",50,50.4,31.9,63.3%,69.4,22',
+      'DAVID,Night,"4,946",39,52.4,40.9,78.1%,94.4,9',
+      'EDWIN,Night,"3,510",53,51.9,40.6,78.2%,67.6,22',
+      'PAUL ALVAREZ,Day,"2,420",38,42.6,32.2,75.6%,56.8,19',
+      'ALEXANDER,Night,"2,970",45,49.7,36.1,72.7%,59.7,27',
+      'JOSE M,Night,"3,182",42,56.3,44.2,78.5%,56.5,16',
+      'ALFREDO,Night,"3,358",54,51.2,37.9,74.1%,65.6,26',
+      'NESTOR,Night,"1,356",28,51.3,21.0,40.9%,26.4,13',
+      'MAURICIO,Day,"2,834",43,52.9,44.2,83.6%,53.5,18',
+      'EDDI,Night,"2,623",61,52.1,36.6,70.2%,50.4,27',
+      'JONATHAN,Night,"1,240",31,52.8,30.8,58.3%,23.5,6',
+      'DEZMOND,Night,"2,250",44,51.0,28.1,55.0%,44.1,12',
+      'DANII,Day,845,22,48.2,12.8,26.6%,17.5,13',
+      'HECTOR,Day,"3,621",41,55.4,38.4,69.3%,65.3,22',
+    ].join('\n');
+  }
+})();

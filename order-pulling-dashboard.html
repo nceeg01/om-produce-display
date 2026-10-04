@@ -4,230 +4,66 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#E8711A">
+  <meta name="theme-color" content="#1F3864">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23E8711A'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='26' font-weight='900' fill='%23fff' text-anchor='middle'%3EOM%3C/text%3E%3C/svg%3E">
-  <title>Order Pulling — OM Produce</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/tokens.css">
-  <link rel="stylesheet" href="assets/base.css">
+  <title>Employee Scorecard — OM Produce</title>
   <style>
-    html, body { height: 100%; overflow: hidden; }
-    body { display: flex; flex-direction: column; }
-
-    /* ── KPI band ─────────────────────────────────────────── */
-    .kpis { display: flex; align-items: stretch; gap: 12px; padding: 12px 28px; flex-shrink: 0; background: #fff; border-bottom: 1px solid var(--border); }
-    .kpi { display: flex; flex-direction: column; justify-content: center; min-width: 120px; padding: 8px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); }
-    .kpi .n { font-family: var(--f-head); font-size: clamp(30px, 5vh, 56px); font-weight: 900; line-height: 1; color: var(--text); }
-    .kpi .l { font-family: var(--f-head); font-size: clamp(11px, 1.4vh, 15px); font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-top: 4px; white-space: nowrap; }
-    .kpi .s { font-size: clamp(11px, 1.3vh, 14px); color: var(--muted); margin-top: 2px; white-space: nowrap; }
-    .kpi.topull  { background: var(--surface2); }
-    .kpi.pulling { background: var(--amber-l); border-color: var(--amber-m); }
-    .kpi.pulling .n, .kpi.pulling .l { color: var(--amber); }
-    .kpi.hold    { background: var(--red-l); border-color: var(--red-m); }
-    .kpi.hold .n, .kpi.hold .l { color: var(--red); }
-    .kpi.pulled  { background: var(--olive-l); border-color: var(--olive-m); }
-    .kpi.pulled .n, .kpi.pulled .l { color: var(--olive); }
-    .kpi.qty     { background: var(--orange-l); border-color: var(--orange-m); }
-    .kpi.qty .n, .kpi.qty .l { color: var(--orange); }
-
-    .progress { flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 8px 4px 8px 12px; }
-    .prog-top { display: flex; align-items: baseline; gap: 12px; }
-    .prog-pct { font-family: var(--f-head); font-size: clamp(30px, 5vh, 56px); font-weight: 900; line-height: 1; color: var(--olive); }
-    .prog-lbl { font-family: var(--f-head); font-size: clamp(14px, 2vh, 22px); font-weight: 700; color: var(--muted); letter-spacing: .5px; }
-    .prog-lbl b { color: var(--text); }
-    .prog-avg { margin-left: auto; font-family: var(--f-head); font-size: clamp(13px, 1.8vh, 20px); font-weight: 700; color: var(--muted); white-space: nowrap; }
-    .prog-avg b { color: var(--text); }
-    .bar { position: relative; height: clamp(14px, 2.2vh, 24px); border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); overflow: hidden; display: flex; }
-    .bar .seg { height: 100%; transition: width .6s ease; }
-    .bar .seg + .seg { border-left: 2px solid #fff; }
-    .bar .seg:first-child, .bar .seg[style*="display: none"] + .seg { border-left: none; }
-    .bar .seg.pulled  { background: var(--olive); }
-    .bar .seg.pulling { background: var(--amber); }
-    .bar .seg.hold    { background: var(--red); }
-
-    /* ── Main area ────────────────────────────────────────── */
-    .main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr clamp(340px, 26vw, 540px); }
-
-    .queue { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--border); background: #fff; }
-    .qhdr { display: flex; align-items: center; gap: 12px; padding: 12px 28px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
-    .qlabel { font-family: var(--f-head); font-size: clamp(16px, 2.2vh, 24px); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--text); }
-    .qbadge { background: var(--orange-l); color: var(--orange); border: 1px solid var(--orange-m); border-radius: 20px; padding: 2px 14px; font-family: var(--f-head); font-size: clamp(15px, 2vh, 22px); font-weight: 800; }
-    .qpage { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-    .pglbl { font-family: var(--f-head); font-size: clamp(12px, 1.6vh, 16px); font-weight: 700; color: var(--muted); letter-spacing: .5px; white-space: nowrap; }
-    .qdots { display: flex; gap: 6px; }
-    .qdot { width: 10px; height: 10px; border-radius: 50%; background: var(--border2); transition: background .3s, transform .3s; }
-    .qdot.on { background: var(--orange); transform: scale(1.25); }
-
-    /* Header + rows share one CSS grid template (set from JS per detected columns). */
-    .thead, .trow { display: grid; align-items: center; column-gap: 18px; padding: 0 28px; font-size: clamp(13px, 2vh, 22px); }
-    .thead { flex-shrink: 0; padding-top: 8px; padding-bottom: 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
-    .th { font-family: var(--f-head); font-size: clamp(11px, 1.5vh, 16px); font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .th.num, .td.num { text-align: right; }
-
-    /* Rows flex to share the panel height: a full page always fits, rotation handles overflow. */
-    .tbody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-    .trow { flex: 1 1 0; min-height: 0; max-height: 120px; border-bottom: 1px solid var(--border); border-left: 6px solid transparent; padding-left: 22px; }
-    .trow:nth-child(even) { background: #FDFCFA; }
-    .trow.pulling { background: var(--amber-l); border-left-color: var(--amber); }
-    .trow.hold    { background: var(--red-l); border-left-color: var(--red); }
-    .trow.stale   { animation: stalepulse 1.6s infinite; border-left-color: var(--red); }
-    @keyframes stalepulse { 0%,100% { box-shadow: inset 0 0 0 2px var(--red-m); } 50% { box-shadow: inset 0 0 0 2px var(--red); } }
-    .trow.enter { animation: rowin .35s ease-out; }
-    @keyframes rowin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-    .td { min-width: 0; font-family: var(--f-head); font-size: clamp(16px, 2.7vh, 30px); font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .td.stagecol { font-size: 1em; overflow: visible; }   /* pill scales with the row font, like the 9em track */
-    .td.pos { font-weight: 900; color: var(--muted2); }
-    .td.order { font-size: clamp(14px, 2.3vh, 26px); font-weight: 700; color: var(--muted); letter-spacing: .5px; }
-    .td.primary { font-size: clamp(18px, 3.3vh, 38px); font-weight: 800; line-height: 1.05; }
-    .td.primary .sub { display: block; font-family: var(--f-body); font-size: clamp(11px, 1.5vh, 16px); font-weight: 500; color: var(--muted); font-style: italic; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; }
-    .td.qty { font-weight: 900; color: var(--orange); }
-    .td.muted { color: var(--muted2); }
-    .td.time .warn { color: var(--red); font-weight: 800; }
-    .td.time .ok { color: var(--olive); font-weight: 700; }
-    .rush { display: inline-block; vertical-align: middle; margin-right: 8px; padding: 1px 8px; border-radius: 4px; background: var(--red); color: #fff; font-size: .55em; font-weight: 800; letter-spacing: 1px; }
-
-    /* Pull-stage pills (TV-sized; colors from the shared status palette) */
-    .spill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 5px; font-family: var(--f-head); font-size: 1em; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; border: 1px solid; }
-    .spill::before { content: ''; width: .45em; height: .45em; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-    .spill.topull  { background: var(--surface2); color: var(--gray); border-color: var(--border2); }
-    .spill.pulling { background: #fff; color: var(--amber); border-color: var(--amber-m); }
-    .spill.hold    { background: var(--red); color: #fff; border-color: var(--red); }
-    .spill.pulled  { background: var(--olive-l); color: var(--olive); border-color: var(--olive-m); }
-    .spill.loaded  { background: var(--blue-l); color: var(--blue); border-color: var(--blue-m); }
-
-    .qempty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; color: var(--muted); }
-    .qempty .ei { font-size: clamp(48px, 9vh, 96px); margin-bottom: 18px; }
-    .qempty h3 { font-family: var(--f-head); font-size: clamp(26px, 4.5vh, 52px); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-    .qempty.done h3 { color: var(--olive); }
-    .qempty p { font-size: clamp(13px, 1.8vh, 18px); margin-top: 10px; color: var(--muted); max-width: 640px; line-height: 1.5; }
-
-    /* ── Side panel ───────────────────────────────────────── */
-    .side { display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: var(--surface); }
-    .sec { display: flex; flex-direction: column; min-height: 0; padding: 14px 22px 10px; border-bottom: 1px solid var(--border); }
-    .sec:last-child { border-bottom: none; flex: 1; }
-    .sec-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .sec-hd .t { font-family: var(--f-head); font-size: clamp(13px, 1.8vh, 19px); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-    .sec-hd .c { font-family: var(--f-head); font-size: clamp(13px, 1.8vh, 19px); font-weight: 800; color: var(--muted2); }
-    .sec-hd::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-    .sec.now .sec-hd .t { color: var(--amber); }
-    .sec.now .sec-hd .t::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--amber); margin-right: 8px; vertical-align: middle; animation: lp 2s infinite; }
-    .sec-list { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
-
-    .ncard { background: #fff; border: 1px solid var(--amber-m); border-left: 5px solid var(--amber); border-radius: var(--radius-sm); padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
-    .ncard.stale { border-color: var(--red-m); border-left-color: var(--red); }
-    .ncard .nm { flex: 1; min-width: 0; font-family: var(--f-head); font-size: clamp(18px, 2.8vh, 30px); font-weight: 800; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ncard .who { display: block; font-family: var(--f-body); font-size: clamp(11px, 1.5vh, 15px); font-weight: 600; color: var(--muted); margin-top: 2px; }
-    .ncard .tm { font-family: var(--f-head); font-size: clamp(18px, 2.8vh, 30px); font-weight: 900; color: var(--amber); white-space: nowrap; }
-    .ncard.stale .tm { color: var(--red); }
-
-    .prow { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 14px; }
-    .prow .nm { flex: 1; min-width: 0; font-family: var(--f-head); font-size: clamp(16px, 2.4vh, 26px); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .prow .st { font-family: var(--f-head); font-size: clamp(13px, 1.9vh, 20px); font-weight: 700; color: var(--muted); white-space: nowrap; }
-    .prow .st b { color: var(--olive); font-weight: 900; }
-    .prow .act { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
-    .prow .act.idle { background: var(--border2); }
-
-    .drow { display: flex; align-items: baseline; gap: 10px; padding: 4px 2px; border-bottom: 1px dashed var(--border); }
-    .drow:last-child { border-bottom: none; }
-    .drow .ck { color: var(--olive); font-weight: 900; font-family: var(--f-head); font-size: clamp(15px, 2.2vh, 24px); }
-    .drow .nm { flex: 1; min-width: 0; font-family: var(--f-head); font-size: clamp(15px, 2.2vh, 24px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .drow .tm { font-family: var(--f-head); font-size: clamp(12px, 1.7vh, 18px); font-weight: 700; color: var(--muted); white-space: nowrap; }
-    .side-empty { font-size: clamp(12px, 1.6vh, 16px); color: var(--muted2); padding: 4px 2px; }
-
-    @media (prefers-reduced-motion: reduce) {
-      .trow.enter, .trow.stale, .bar .seg, .sec.now .sec-hd .t::before { animation: none; transition: none; }
+    /* Mirrors the sheet's EMPLOYEE SCORECARD: navy header, plain rows,
+       conditional fill on the utilisation column. Row height and font size
+       are set from JS so every row fits the TV with no scrolling. */
+    :root {
+      --navy: #1F3864;
+      --ink: #1A1A1A;
+      --grid: #D9D9D9;
+      --zebra: #F7F7F7;
+      --good: #C6EFCE;
+      --warn: #FFEB9C;
+      --bad:  #FFC7CE;
+      --err:  #C0321E;
     }
-    @media (max-width: 1000px) {
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: #fff; }
+    body { color: var(--ink); font-family: Aptos, Calibri, 'Segoe UI', Roboto, Arial, Helvetica, sans-serif; display: flex; flex-direction: column; padding: 1.2vh 1.4vw 1vh; }
+
+    .title-row { display: flex; align-items: baseline; gap: 16px; flex-shrink: 0; padding-bottom: .6vh; }
+    .title { font-size: clamp(16px, 3vh, 40px); font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--navy); }
+    .note { margin-left: auto; font-size: clamp(11px, 1.4vh, 16px); color: #888; white-space: nowrap; }
+    .note.err { color: var(--err); font-weight: 700; }
+
+    .wrap { flex: 1; min-height: 0; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 16px; }
+    th, td { border: 1px solid var(--grid); padding: 0 .6em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    th { background: var(--navy); color: #fff; font-weight: 700; text-align: center; white-space: normal; line-height: 1.15; padding: .35em .5em; border-color: var(--navy); }
+    tbody tr:nth-child(even) td { background: var(--zebra); }
+    td { text-align: center; }
+    td.first { text-align: left; font-weight: 700; }
+    td.num { text-align: right; }
+    td.pct { text-align: center; }
+    tbody tr td.good { background: var(--good); }
+    tbody tr td.warn { background: var(--warn); }
+    tbody tr td.bad  { background: var(--bad); }
+
+    .msg { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #888; font-size: clamp(14px, 2.4vh, 28px); gap: 10px; }
+    .msg b { color: var(--ink); font-size: 1.3em; }
+
+    @media (max-width: 760px) {
       html, body { overflow: auto; height: auto; }
-      .kpis { flex-wrap: wrap; padding: 10px 16px; }
-      .progress { flex-basis: 100%; padding-left: 0; }
-      .main { grid-template-columns: 1fr; }
-      .queue { border-right: none; min-height: 70vh; }
-      .thead, .trow { padding-left: 16px; padding-right: 16px; column-gap: 10px; font-size: 13px; }
-      .spill { padding: 4px 9px; gap: 6px; }
-      .trow { padding-left: 10px; min-height: 52px; }
+      .wrap { overflow-x: auto; }
+      table { min-width: 840px; font-size: 13px; }
+      td, th { height: auto !important; padding-top: 6px; padding-bottom: 6px; }
     }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="logo-wrap">
-      <img class="logo-img" src="https://omproduce.com/wp-content/uploads/om-produce-logo.webp" alt="OM Produce">
-    </div>
-    <div class="screen-tag">📋 Order Pulling</div>
-    <div class="tb-right">
-      <div class="live-pill loading" id="lpill"><div class="ldot"></div><span id="ltxt">LOADING</span></div>
-      <div class="clock-wrap"><div class="clock big" id="clk">--:--</div><div class="dateline" id="dln">—</div></div>
-    </div>
+  <div class="title-row">
+    <div class="title" id="title">Employee Scorecard</div>
+    <div class="note" id="note"></div>
   </div>
-
-  <div class="kpis" id="kpis">
-    <div class="kpi topull"><div class="n" id="k-topull">0</div><div class="l">To Pull</div></div>
-    <div class="kpi pulling"><div class="n" id="k-pulling">0</div><div class="l">Pulling</div></div>
-    <div class="kpi hold" id="kpi-hold" style="display:none"><div class="n" id="k-hold">0</div><div class="l">On Hold</div></div>
-    <div class="kpi pulled"><div class="n" id="k-pulled">0</div><div class="l">Pulled</div></div>
-    <div class="kpi qty" id="kpi-qty" style="display:none"><div class="n" id="k-qty">0</div><div class="l" id="k-qty-l">Boxes</div><div class="s" id="k-qty-s"></div></div>
-    <div class="progress">
-      <div class="prog-top">
-        <span class="prog-pct" id="p-pct">0%</span>
-        <span class="prog-lbl"><b id="p-done">0</b> of <b id="p-total">0</b> orders pulled</span>
-        <span class="prog-avg" id="p-avg" style="display:none">⏱ avg pull <b id="p-avg-v">—</b></span>
-      </div>
-      <div class="bar" role="img" id="p-bar" aria-label="Pull progress">
-        <div class="seg pulled" id="b-pulled" style="width:0"></div>
-        <div class="seg pulling" id="b-pulling" style="width:0"></div>
-        <div class="seg hold" id="b-hold" style="width:0"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="main">
-    <section class="queue">
-      <div class="qhdr">
-        <span class="qlabel">Pull Queue</span>
-        <span class="qbadge" id="q-count">0</span>
-        <div class="qpage" id="qpage" style="display:none">
-          <span class="pglbl" id="q-pglbl"></span>
-          <div class="qdots" id="q-dots"></div>
-        </div>
-      </div>
-      <div class="thead" id="thead"></div>
-      <div class="tbody" id="tbody"></div>
-    </section>
-
-    <aside class="side">
-      <div class="sec now">
-        <div class="sec-hd"><span class="t">Pulling Now</span><span class="c" id="n-count"></span></div>
-        <div class="sec-list" id="now-list"></div>
-      </div>
-      <div class="sec" id="sec-pullers" style="display:none">
-        <div class="sec-hd"><span class="t">Pullers</span><span class="c" id="pl-count"></span></div>
-        <div class="sec-list" id="pullers"></div>
-      </div>
-      <div class="sec">
-        <div class="sec-hd"><span class="t">Just Pulled</span><span class="c" id="d-count"></span></div>
-        <div class="sec-list" id="done-list"></div>
-      </div>
-    </aside>
-  </div>
-
-  <div class="btm">
-    <span class="demo-tag" id="demo" style="display:none">DEMO DATA</span>
-    <span id="cols-info"></span>
-    <div class="btm-r">
-      <span id="last-upd">—</span>
-      <span id="cdown"></span>
-      <a href="warehouse.html">📦 Warehouse</a>
-      <a href="index.html">⚙ Settings</a>
-    </div>
-  </div>
+  <div class="wrap" id="wrap"><div class="msg">Loading…</div></div>
 
   <script src="assets/env.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/api.js"></script>
-  <script src="assets/pulling.js"></script>
+  <script src="assets/scorecard.js"></script>
 </body>
 </html>
