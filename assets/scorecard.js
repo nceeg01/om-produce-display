@@ -1,9 +1,10 @@
 /* ============================================================
    OM Produce — Employee Scorecard (warehouse TV, /order-pulling-dashboard)
    ------------------------------------------------------------
-   Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL) exactly as
-   the sheet has it: same title, headers, values and row order — nothing
-   added. The tab also holds a TOTALS block above the scorecard; only the
+   Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL) as the sheet
+   has it: same title, headers and values — nothing added. Rows are ranked
+   by Cases, most first (?sort=<column> &dir=asc, or ?sort=none for sheet
+   order). The tab also holds a TOTALS block above the scorecard; only the
    per-employee table is shown. The only styling rule is the sheet's
    colour scale on the utilisation column (header containing "Util"):
        ≥ 70% green · ≥ 50% yellow · below red      (?good=70&warn=50)
@@ -18,6 +19,8 @@
   var DEMO = qs.get('demo') === '1' || !CSV_URL;
   var GOOD = num(qs.get('good'), 70);
   var WARN = num(qs.get('warn'), 50);
+  var SORT = (qs.get('sort') || 'Cases').trim();    // column to rank rows by
+  var SORT_ASC = qs.get('dir') === 'asc';           // default: highest first
   var REFRESH_MS = (cfg.refreshTv || 10) * 1000;
   var ROTATE_MS = 10000;
   var MIN_ROW_VH = 0.028;      // smallest row before paging (~30px on a 1080p TV)
@@ -116,14 +119,40 @@
       // Small whole numbers (stops, mistakes) sit centred; amounts align right.
       return nums.every(function (v) { return /^\d{1,3}$/.test(v); }) ? 'int' : 'num';
     });
+    var heads = cols.map(function (c) { return head[c]; });
+    var rows = data.map(function (row) { return cols.map(function (c) { return row[c] || ''; }); });
     return {
       title: t.title,
-      head: cols.map(function (c) { return head[c]; }),
-      rows: data.map(function (row) { return cols.map(function (c) { return row[c] || ''; }); }),
+      head: heads,
+      rows: rankRows(rows, sortColumn(heads)),
       kinds: kinds,
       // Only the utilisation column carries the sheet's green/yellow/red scale.
       tone: cols.map(function (c) { return /util/i.test(head[c]); }),
     };
+  }
+
+  /* "Cases" matches the Cases column exactly — never "Cases / Payroll Hr". */
+  function sortColumn(heads) {
+    if (/^none$/i.test(SORT)) return -1;
+    var want = SORT.toLowerCase(), i;
+    for (i = 0; i < heads.length; i++) if (heads[i].toLowerCase() === want) return i;
+    for (i = 0; i < heads.length; i++) {
+      var h = heads[i].toLowerCase();
+      if (h.indexOf(want) === 0 && h.indexOf('/') < 0) return i;
+    }
+    return -1;
+  }
+
+  /* Stable numeric sort ("3,357" → 3357); blanks and text sink to the bottom. */
+  function rankRows(rows, k) {
+    if (k < 0) return rows;
+    return rows.map(function (row, i) {
+      var n = parseFloat(String(row[k]).replace(/[^\d.\-]/g, ''));
+      return { row: row, i: i, n: isNaN(n) ? null : n };
+    }).sort(function (a, b) {
+      if (a.n === null || b.n === null) return a.n === b.n ? a.i - b.i : (a.n === null ? 1 : -1);
+      return (SORT_ASC ? a.n - b.n : b.n - a.n) || a.i - b.i;
+    }).map(function (x) { return x.row; });
   }
 
   function tone(v) {
