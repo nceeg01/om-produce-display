@@ -3,8 +3,9 @@
    ------------------------------------------------------------
    Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL) exactly as
    the sheet has it: same title, headers, values and row order — nothing
-   added. The only styling rule is the sheet's colour scale on the
-   utilisation column (header containing "Util" or "%"):
+   added. The tab also holds a TOTALS block above the scorecard; only the
+   per-employee table is shown. The only styling rule is the sheet's
+   colour scale on the utilisation column (header containing "Util"):
        ≥ 70% green · ≥ 50% yellow · below red      (?good=70&warn=50)
    Rows and font scale so the whole table fits the TV; if it ever can't
    fit, it pages every 10s. ?demo=1 shows sample data.
@@ -38,26 +39,69 @@
     return e;
   }
 
-  /* ── CSV → { title, head, rows, kinds } ──────────────────── */
+  /* ── CSV → { title, head, rows, kinds, tone } ────────────── */
+  /* The published tab holds more than one table (a TOTALS block, then the
+     EMPLOYEE SCORECARD). Split it into tables — each starts at a header
+     row, optionally under a one-cell title row — and show the per-employee
+     one. Rows inside a table are kept as is, blank lines included. */
   var NUM_RE = /^[-+$]?\s*[\d,]*\.?\d+\s*%?$/;
+  var ERR_RE = /^#[A-Z\/0!?]+/;           // #VALUE!, #DIV/0!, #N/A, #REF!
+
+  function cells(row) { return row.map(str).filter(Boolean); }
+  /* ≥3 labels and (almost) no numbers — and, inside a table, about as wide
+     as its header, so a sparse data row like "NEW HIRE, Night, N/A" stays data. */
+  function isHeader(row, cur) {
+    var f = cells(row);
+    if (f.length < 3) return false;
+    if (cur && f.length < 0.6 * cells(cur.head).length) return false;
+    return f.filter(function (v) { return NUM_RE.test(v) || ERR_RE.test(v); }).length <= 1;
+  }
+  function nextFilled(rows, i) {
+    for (var j = i + 1; j < rows.length; j++) if (filled(rows[j])) return rows[j];
+    return null;
+  }
+
+  function splitTables(rows) {
+    var tables = [], cur = null, title = '';
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i], f = filled(row);
+      if (!f) continue;
+      if (isHeader(row, cur)) {
+        cur = { title: title, head: row.map(str), rows: [] };
+        tables.push(cur);
+        title = '';
+        continue;
+      }
+      var nxt = nextFilled(rows, i);
+      if (f === 1 && (!cur || (nxt && isHeader(nxt, null)))) {   // title of the next table
+        title = cells(row)[0];
+        cur = null;
+        continue;
+      }
+      if (cur) cur.rows.push(row.map(str));
+    }
+    return tables;
+  }
+
+  /* The per-employee table: first header cell names a person, title says
+     scorecard; a TOTALS block is never it. Ties go to the most rows. */
+  function pickTable(tables) {
+    var best = null, bestScore = -Infinity;
+    tables.forEach(function (t) {
+      var h0 = t.head[0] || '';
+      var sc = t.rows.length +
+        (/^(employee|name|puller|picker|associate|worker|emp\b)/i.test(h0) ? 1000 : 0) +
+        (/scorecard/i.test(t.title) ? 500 : 0) -
+        (/^total/i.test(h0) || /^totals?\b/i.test(t.title) ? 2000 : 0);
+      if (sc > bestScore) { bestScore = sc; best = t; }
+    });
+    return best;
+  }
 
   function toModel(text) {
-    var rows = OM.parseCsv(text);
-    // Header = first row with ≥3 filled cells; a single-cell row above it is the title.
-    var hi = -1, title = '';
-    for (var i = 0; i < Math.min(rows.length, 20); i++) {
-      var f = filled(rows[i]);
-      if (f >= 3) { hi = i; break; }
-      if (f === 1) title = str(rows[i].filter(function (c) { return str(c); })[0]);
-    }
-    if (hi < 0) return null;
-    var head = rows[hi].map(str);
-    // Data runs until the first blank row after it starts (the table's end).
-    var data = [];
-    for (var r = hi + 1; r < rows.length; r++) {
-      if (!filled(rows[r])) { if (data.length) break; continue; }
-      data.push(rows[r].map(str));
-    }
+    var t = pickTable(splitTables(OM.parseCsv(text)));
+    if (!t) return null;
+    var head = t.head, data = t.rows;
     // Keep columns that have a header or any value.
     var cols = [];
     for (var c = 0; c < head.length; c++) {
@@ -68,15 +112,17 @@
       var vals = data.map(function (row) { return row[c] || ''; }).filter(Boolean);
       var nums = vals.filter(function (v) { return NUM_RE.test(v); });
       if (!vals.length || nums.length / vals.length < 0.6) return 'text';
-      if (/util/i.test(head[c]) || /%/.test(head[c]) || nums.every(function (v) { return /%$/.test(v); })) return 'pct';
+      if (/%/.test(head[c]) || nums.every(function (v) { return /%$/.test(v); })) return 'pct';
       // Small whole numbers (stops, mistakes) sit centred; amounts align right.
       return nums.every(function (v) { return /^\d{1,3}$/.test(v); }) ? 'int' : 'num';
     });
     return {
-      title: title,
+      title: t.title,
       head: cols.map(function (c) { return head[c]; }),
       rows: data.map(function (row) { return cols.map(function (c) { return row[c] || ''; }); }),
       kinds: kinds,
+      // Only the utilisation column carries the sheet's green/yellow/red scale.
+      tone: cols.map(function (c) { return /util/i.test(head[c]); }),
     };
   }
 
@@ -136,7 +182,7 @@
       row.forEach(function (v, k) {
         var kind = model.kinds[k];
         var td = el('td', kind === 'first' ? 'first' : kind === 'num' ? 'num' : kind === 'pct' ? 'pct' : '', v);
-        if (kind === 'pct') { var t = tone(v); if (t) td.className += ' ' + t; }
+        if (model.tone[k]) { var t = tone(v); if (t) td.className += ' ' + t; }
         tr.appendChild(td);
       });
       tb.appendChild(tr);
@@ -229,9 +275,13 @@
   window.addEventListener('resize', function () { if (model) { paginate(); fillPage(); } });
   load();
 
-  /* ── Demo (?demo=1) — the scorecard as published ─────────── */
+  /* ── Demo (?demo=1) — laid out like the published tab ────── */
   function demoCsv() {
     return [
+      'TOTALS = THE 28 ORDER PULLERS LISTED BELOW (NON-PULLERS EXCLUDED),,,,,,,,',
+      'Total Cases,Total Stops,Payroll Hrs,Productive Hrs,Productive Util %,Cases / Payroll Hr,Cases / Productive Hr,Cases Sent Back,"Mistakes / 1,000 Cases"',
+      '"81,882","1,155","1,447.00",988,68.30%,56.6,82.9,#VALUE!,0',
+      ',,,,,,,,',
       'EMPLOYEE SCORECARD,,,,,,,,',
       'Employee,Shift,Cases,Stops,Payroll Hrs,Productive Hrs,Productive Util %,Cases / Payroll Hr,Mistakes (items)',
       'YASNIEL,Day,"3,357",43,52.7,39.3,74.5%,63.7,13',
