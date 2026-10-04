@@ -25,6 +25,11 @@ window.OM_CONFIG = {
   WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzKVwltLNlvAXf39Jh5_L-j_G9dMgqH-OY97K7D59KbY94S4vuRC53Wg45RG9CYgGTw9w/exec',
   CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrvObxcc20khZyWSnc8D4svHjN16_uFafEbSm_YG_PangAVIoz-eo9Yj4EGLBaA56y8IuA4llwqr8U/pub?gid=1533423010&single=true&output=csv',
   TOKEN: '',                 // injected at deploy from Vercel env (assets/env.js)
+
+  /* Order Pulling Dashboard (/order-pulling-dashboard) — its own published
+     sheet tab (CSV, read-only). Columns are auto-detected from the header
+     row, so the sheet layout can change without a code change. */
+  PULL_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSdNXmMiVAYRBZ1Iaqwc04moSpNmizQOzriKCtXmBDskM3zTmPr1earT8qX4uOBo05mmk-UUK7vgdtV/pub?gid=1550056368&single=true&output=csv',
   DEFAULT_PIN: '9020',       // staff PIN for /control + /checkin (auto-unlock, no prompt)
 
   /* Fleet timezone — every clock, timestamp and ETA renders in THIS zone
@@ -72,6 +77,7 @@ window.OM_CONFIG = {
   if (!env) return;
   if (env.WEB_APP_URL) window.OM_CONFIG.WEB_APP_URL = env.WEB_APP_URL;
   if (env.CSV_URL) window.OM_CONFIG.CSV_URL = env.CSV_URL;
+  if (env.PULL_CSV_URL) window.OM_CONFIG.PULL_CSV_URL = env.PULL_CSV_URL;
   if (env.TOKEN) window.OM_CONFIG.TOKEN = env.TOKEN;
   if (env.DEFAULT_PIN) window.OM_CONFIG.DEFAULT_PIN = env.DEFAULT_PIN;
   if (env.TIMEZONE) window.OM_CONFIG.TIMEZONE = env.TIMEZONE;
@@ -100,6 +106,7 @@ window.getConfig = function getConfig() {
   return {
     url: url,
     csvUrl: csvUrl,
+    pullCsvUrl: (c.PULL_CSV_URL || '').trim(),
     token: token,
     pin: pin,
     refreshTv: c.REFRESH_TV,

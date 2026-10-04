@@ -28,6 +28,7 @@ Google Sheet ──┬─(Apps Script Web App — token JSON, read+write)──�
 | `/control` | **Warehouse iPad** | **One big tap per stage** (▶ Start Pulling → ✓ Done Pulling → 📦 Picked Up) + ±boxes, ±5-min estimate, editable **Start/End/Pickup** time chips, tap-to-filter counters. Auto-unlocks. |
 | `/checkin` | **Sales window (op3)** | **Mark arrivals, reorder the queue, quick-add walk-ins, record customer pickup time.** Auto-unlocks. |
 | `/warehouse` | Warehouse TV | Orders by stage, boxes, addons, live pull timers, "Now Pulling" strip, stale alerts |
+| `/order-pulling-dashboard` | Warehouse TV | Pull queue (auto-rotating), Pulling Now with live timers, puller stats, % pulled + box totals — reads its **own published sheet tab** (`PULL_CSV_URL`) and **auto-detects the columns** from the header row |
 | `/pickup` | Customer TV | "Now Ready" hero + **rotating queue (≤10 / page, auto-advances every 5s)** with per-line ETAs (customer **name** only) |
 | `/window` | Sales desk TV | What to invoice **now** + what's coming up, with arrival times |
 | `/analytics` | Manager | Pull times, throughput by hour, boxes/hour, slowest orders |
@@ -111,7 +112,7 @@ from `/control` and `/checkin` when the script enforces a token:
 
 1. In the Vercel project → **Settings → Environment Variables**, add `OM_API_TOKEN` = your
    Apps Script `API_TOKEN` (the same value as the sheet's Script Property). *(Optional:
-   `OM_WEBAPP_URL`, `OM_CSV_URL`, `OM_STAFF_PIN` to override the baked URL / feed / PIN.)*
+   `OM_WEBAPP_URL`, `OM_CSV_URL`, `OM_PULL_CSV_URL`, `OM_STAFF_PIN` to override the baked URL / feeds / PIN.)*
 2. **Redeploy.** The build (`scripts/gen-env.js`, wired via `vercel.json`'s `buildCommand`)
    writes `assets/env.js` from those vars, and `config.js` merges them onto `OM_CONFIG`.
 
@@ -121,6 +122,32 @@ dev. To re-point the fleet permanently, edit the constants at the top of `config
 
 > **Demo mode:** with neither URL configured, every screen renders built-in sample data
 > (`assets/sample.js`) so you can preview the UI before the sheet/script are ready.
+
+## Order Pulling Dashboard (`/order-pulling-dashboard`)
+
+A separate warehouse-TV screen fed by its own published tab
+(`PULL_CSV_URL` in `assets/config.js`; override with the `OM_PULL_CSV_URL` env var).
+It needs **no fixed layout** — the header row is found automatically (title rows above
+it are skipped) and columns are matched by name:
+
+| Role | Header examples |
+|------|-----------------|
+| Order # | `Order #`, `Order No.`, `SO#`, `Invoice #`, `Ticket` |
+| Customer | `Customer`, `Customer Name`, `Store`, `Account` |
+| Product (line items) | `Item`, `Product`, `Description` |
+| Qty | `Boxes`, `Cases`, `Qty`, `Pallets` |
+| Puller | `Puller`, `Picker`, `Pulled By`, `Assigned To` |
+| Status | `Status`, `Stage` — free text: *Pending / In Progress / Pulled / Short / Loaded…* |
+| Done ✓ | `Pulled?`, `Done` (checkbox TRUE/FALSE) |
+| Start / End | `Start`, `Start Time` / `End`, `Finish`, `Completed` |
+| Route / Due / Priority / Notes | `Route`, `Door`, `Dock` / `Pickup`, `Due` / `Priority`, `Rush` / `Notes` |
+
+Stage per row: Status text → Done checkbox → End time (Pulled) / Start time (Pulling)
+→ otherwise *To Pull*. Pulls running longer than `STALE_PULL_MIN` pulse red. Rows with
+the same order # roll up to one order in the KPIs. Unrecognised columns with data show
+as extra columns (up to 3). The bottom bar lists the columns it matched.
+TV tuning via URL: `?rows=12` (rows per page), `?rotate=10` (seconds per page),
+`?demo=1` (sample data).
 
 ## Daily use
 
@@ -132,7 +159,7 @@ dev. To re-point the fleet permanently, edit the constants at the top of `config
 ## Code map
 
 ```
-index.html  warehouse.html  pickup.html  window.html  analytics.html
+index.html  warehouse.html  pickup.html  window.html  analytics.html  order-pulling-dashboard.html
 control.html  checkin.html                interactive (PIN-locked)
 assets/
   tokens.css   base.css        design system (one source of truth)
@@ -140,6 +167,7 @@ assets/
   ui.js                        toast + PIN gate for interactive pages
   sample.js                    demo data (interactive in demo mode)
   warehouse.js pickup.js window.js analytics.js admin.js   display/admin render
+  pulling.js                   /order-pulling-dashboard (own CSV feed, column auto-detect)
   control.js   checkin.js      interactive render + writes
 apps-script/Code.gs            onEdit timestamps + doGet (read) + doPost (write) + LOG archive
 vercel.json                    clean URLs + no-store headers
