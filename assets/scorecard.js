@@ -2,9 +2,11 @@
    OM Produce — Employee Scorecard (warehouse TV, /order-pulling-dashboard)
    ------------------------------------------------------------
    Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL) as the sheet
-   has it: same title, headers and values — nothing added. Rows are ranked
-   by Cases, most first (?sort=<column> &dir=asc, or ?sort=none for sheet
-   order). The tab also holds a TOTALS block above the scorecard; only the
+   has it: same title, headers and values — nothing added. Headers carry a
+   Spanish line under the English. Every column sorts on click/tap (again
+   to flip); the choice is remembered on that TV. Default: Cases, most
+   first (?sort=<column> &dir=asc|desc, or ?sort=none for sheet order).
+   The tab also holds a TOTALS block above the scorecard; only the
    per-employee table is shown. The only styling rule is the sheet's
    colour scale on the utilisation column (header containing "Util"):
        ≥ 70% green · ≥ 50% yellow · below red      (?good=70&warn=50)
@@ -19,8 +21,7 @@
   var DEMO = qs.get('demo') === '1' || !CSV_URL;
   var GOOD = num(qs.get('good'), 70);
   var WARN = num(qs.get('warn'), 50);
-  var SORT = (qs.get('sort') || 'Cases').trim();    // column to rank rows by
-  var SORT_ASC = qs.get('dir') === 'asc';           // default: highest first
+  var SORT_KEY = 'om_scorecard_sort';
   var REFRESH_MS = (cfg.refreshTv || 10) * 1000;
   var ROTATE_MS = 10000;
   var MIN_ROW_VH = 0.028;      // smallest row before paging (~30px on a 1080p TV)
@@ -31,6 +32,7 @@
   var note = document.getElementById('note');
   var titleEl = document.getElementById('title');
   var table = null, lastText = null, model = null, page = 0, pageSize = 0, lastOk = 0;
+  var sort = initialSort();   // { col: header text or '' (sheet order), dir: 'asc' | 'desc' }
 
   function num(v, d) { var n = parseFloat(v); return isNaN(n) ? d : n; }
   function str(v) { return v == null ? '' : String(v).trim(); }
@@ -124,17 +126,36 @@
     return {
       title: t.title,
       head: heads,
-      rows: rankRows(rows, sortColumn(heads)),
+      raw: rows,             // sheet order
+      rows: rows,            // display order — set by applySort()
       kinds: kinds,
       // Only the utilisation column carries the sheet's green/yellow/red scale.
       tone: cols.map(function (c) { return /util/i.test(head[c]); }),
     };
   }
 
-  /* "Cases" matches the Cases column exactly — never "Cases / Payroll Hr". */
+  /* ── Sorting ─────────────────────────────────────────────── */
+  /* Start from the URL (?sort / &dir), else this TV's last click, else
+     Cases high → low. Columns are remembered by header text, so the choice
+     survives refreshes, reloads and columns being added in the sheet. */
+  function initialSort() {
+    var q = qs.get('sort'), d = qs.get('dir');
+    if (q != null) return { col: /^none$/i.test(q) ? '' : q.trim(), dir: d === 'asc' ? 'asc' : d === 'desc' ? 'desc' : '' };
+    try {
+      var saved = JSON.parse(localStorage.getItem(SORT_KEY) || 'null');
+      if (saved && typeof saved.col === 'string') return { col: saved.col, dir: saved.dir === 'asc' ? 'asc' : 'desc' };
+    } catch (e) {}
+    return { col: 'Cases', dir: 'desc' };
+  }
+  function saveSort() {
+    try { localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch (e) {}
+  }
+
+  /* Exact header first; else a header starting with it and without "/",
+     so "Cases" is the Cases column — never "Cases / Payroll Hr". */
   function sortColumn(heads) {
-    if (/^none$/i.test(SORT)) return -1;
-    var want = SORT.toLowerCase(), i;
+    if (!sort.col) return -1;
+    var want = sort.col.toLowerCase(), i;
     for (i = 0; i < heads.length; i++) if (heads[i].toLowerCase() === want) return i;
     for (i = 0; i < heads.length; i++) {
       var h = heads[i].toLowerCase();
@@ -142,17 +163,62 @@
     }
     return -1;
   }
+  function isTextCol(k) { return model.kinds[k] === 'first' || model.kinds[k] === 'text'; }
 
-  /* Stable numeric sort ("3,357" → 3357); blanks and text sink to the bottom. */
-  function rankRows(rows, k) {
-    if (k < 0) return rows;
-    return rows.map(function (row, i) {
-      var n = parseFloat(String(row[k]).replace(/[^\d.\-]/g, ''));
-      return { row: row, i: i, n: isNaN(n) ? null : n };
+  /* Numbers by value ("3,357" → 3357), names/shifts A→Z; stable, and
+     blanks always sink to the bottom whichever way it's sorted. */
+  function applySort() {
+    var k = sortColumn(model.head);
+    model.sortIdx = k;
+    if (k < 0) { model.rows = model.raw; return; }
+    var text = isTextCol(k);
+    var dir = sort.dir || (text ? 'asc' : 'desc');
+    var sign = dir === 'asc' ? 1 : -1;
+    model.sortDir = dir;
+    model.rows = model.raw.map(function (row, i) {
+      var v = str(row[k]), n = parseFloat(v.replace(/[^\d.\-]/g, ''));
+      return { row: row, i: i, v: v, n: text ? null : (isNaN(n) ? null : n) };
     }).sort(function (a, b) {
-      if (a.n === null || b.n === null) return a.n === b.n ? a.i - b.i : (a.n === null ? 1 : -1);
-      return (SORT_ASC ? a.n - b.n : b.n - a.n) || a.i - b.i;
+      var ea = text ? !a.v : a.n === null, eb = text ? !b.v : b.n === null;
+      if (ea || eb) return ea === eb ? a.i - b.i : (ea ? 1 : -1);
+      var c = text ? a.v.localeCompare(b.v, undefined, { sensitivity: 'base', numeric: true }) : a.n - b.n;
+      return sign * c || a.i - b.i;
     }).map(function (x) { return x.row; });
+  }
+
+  /* Click/tap a header: new column → its natural order (numbers high→low,
+     text A→Z); same column → flip. Remembered on this TV. */
+  function sortBy(k, refocus) {
+    var h = model.head[k];
+    if (model.sortIdx === k) sort = { col: h, dir: model.sortDir === 'asc' ? 'desc' : 'asc' };
+    else sort = { col: h, dir: isTextCol(k) ? 'asc' : 'desc' };
+    saveSort();
+    applySort();
+    page = 0;
+    render();
+    // The header row is rebuilt — keep keyboard/remote focus on the same column.
+    if (refocus && table) table.tHead.rows[0].cells[k].focus();
+  }
+
+  /* ── Spanish header lines ────────────────────────────────── */
+  /* Exact headers only — word-by-word would get Spanish word order wrong,
+     so an unknown header simply shows English alone. */
+  var ES = {
+    'employee scorecard': 'Rendimiento de Empleados',
+    'employee': 'Empleado', 'employees': 'Empleados', 'name': 'Nombre', 'puller': 'Surtidor',
+    'shift': 'Turno', 'cases': 'Cajas', 'stops': 'Paradas',
+    'payroll hrs': 'Horas Pagadas', 'payroll hours': 'Horas Pagadas',
+    'productive hrs': 'Horas Productivas', 'productive hours': 'Horas Productivas',
+    'productive util %': '% Utilización Productiva', 'productive utilization %': '% Utilización Productiva',
+    'cases/payroll hr': 'Cajas / Hora Pagada', 'cases/productive hr': 'Cajas / Hora Productiva',
+    'cases sent back': 'Cajas Devueltas', 'mistakes (items)': 'Errores (artículos)',
+    'mistakes': 'Errores', 'mistakes/1,000 cases': 'Errores / 1,000 Cajas',
+    'total cases': 'Total de Cajas', 'total stops': 'Total de Paradas',
+    'date': 'Fecha', 'week': 'Semana', 'rank': 'Puesto', 'accuracy': 'Precisión', 'errors': 'Errores',
+  };
+  function es(h) {
+    var key = str(h).toLowerCase().replace(/\s*\/\s*/g, '/').replace(/\s+%/g, ' %').replace(/\s+/g, ' ');
+    return ES[key] || '';
   }
 
   function tone(v) {
@@ -167,7 +233,9 @@
   /* ── Render ──────────────────────────────────────────────── */
   function render() {
     if (!model) return;
-    titleEl.textContent = model.title || 'Employee Scorecard';
+    var ttl = model.title || 'Employee Scorecard';
+    titleEl.textContent = ttl;
+    if (es(ttl)) titleEl.appendChild(el('span', 'es', es(ttl)));
     document.title = (model.title || 'Employee Scorecard') + ' — OM Produce';
 
     if (!model.rows.length) {
@@ -190,7 +258,24 @@
     table.appendChild(cg);
 
     var thead = el('thead'), htr = el('tr');
-    model.head.forEach(function (h) { htr.appendChild(el('th', null, h)); });
+    model.head.forEach(function (h, k) {
+      var th = el('th');
+      var en = el('span', 'en', h);
+      if (k === model.sortIdx) {
+        th.className = 'sorted';
+        en.appendChild(el('span', 'arrow', model.sortDir === 'asc' ? ' ▲' : ' ▼'));
+      }
+      th.appendChild(en);
+      if (es(h)) th.appendChild(el('span', 'es', es(h)));
+      th.setAttribute('aria-sort', k === model.sortIdx ? (model.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+      th.tabIndex = 0;
+      th.title = 'Sort by ' + h + (es(h) ? ' · Ordenar por ' + es(h) : '');
+      th.addEventListener('click', function () { sortBy(k); });
+      th.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortBy(k, true); }
+      });
+      htr.appendChild(th);
+    });
     thead.appendChild(htr);
     table.appendChild(thead);
     table.appendChild(el('tbody'));
@@ -223,7 +308,7 @@
   function pageNote() {
     if (note.classList.contains('err') || !model) return;
     var pages = pageSize ? Math.ceil(model.rows.length / pageSize) : 1;
-    note.textContent = pages > 1 ? 'Page ' + (page + 1) + ' of ' + pages : '';
+    note.textContent = pages > 1 ? 'Page ' + (page + 1) + ' of ' + pages + ' · Página ' + (page + 1) + ' de ' + pages : '';
   }
 
   function narrow() { return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
@@ -279,6 +364,7 @@
       if (!m) throw new Error('no table found in the sheet');
       lastText = text;
       model = m;
+      applySort();
       render();
     }).catch(function (err) {
       var why = (err && err.name === 'AbortError') ? 'timed out' : ((err && err.message) || 'failed');
@@ -294,6 +380,19 @@
       }
     }).then(function () { inflight = false; });
   }
+
+  /* Hide the mouse pointer after 4s without movement so it doesn't sit on
+     the table; any move, tap or key brings it straight back for sorting. */
+  var idleT = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleT);
+    idleT = setTimeout(function () { document.body.classList.add('idle'); }, 4000);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    document.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
 
   setInterval(load, REFRESH_MS);
   setInterval(function () {
