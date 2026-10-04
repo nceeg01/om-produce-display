@@ -131,8 +131,13 @@ and row order, nothing added. The tab holds two tables (a **TOTALS** block on to
 **EMPLOYEE SCORECARD**); the screen splits them at their header rows and shows only the
 per-employee table. Columns added in the sheet show up automatically.
 
-- Rows are **ranked by Cases, most first** (`?sort=<column>`, `&dir=asc`, or `?sort=none`
-  for the sheet's own order).
+- **Every column sorts** — click/tap a header (or focus it and press Enter); click again to
+  flip. Numbers start high→low, names/shift A→Z; blanks always go last. The choice is
+  remembered on that TV. Default: **Cases, most first** (`?sort=<column>`, `&dir=asc|desc`,
+  or `?sort=none` for the sheet's own order — a URL value wins over the saved click).
+- **Headers in English + Spanish** (Spanish line under each known header; an unknown
+  header shows English only — add it to the `ES` map in `assets/scorecard.js`).
+- The mouse pointer hides after 4s without movement; moving the mouse brings it back.
 - **Productive Util %** (any header containing "Util") is coloured like the sheet:
   ≥ 70% green · ≥ 50% yellow · below red (override with `?good=70&warn=50`).
 - Rows and text scale so every employee fits the TV; if the list ever outgrows the screen
