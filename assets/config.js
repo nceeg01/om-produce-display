@@ -27,7 +27,8 @@ window.OM_CONFIG = {
   TOKEN: '',                 // injected at deploy from Vercel env (assets/env.js)
 
   /* Employee Scorecard TV (/order-pulling-dashboard) — its own published
-     sheet tab (CSV, read-only), displayed exactly as the sheet has it. */
+     sheet tab (CSV, read-only), displayed exactly as the sheet has it.
+     ALWAYS this link: no env-var or URL override, so every TV shows it. */
   PULL_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSdNXmMiVAYRBZ1Iaqwc04moSpNmizQOzriKCtXmBDskM3zTmPr1earT8qX4uOBo05mmk-UUK7vgdtV/pub?gid=1550056368&single=true&output=csv',
   DEFAULT_PIN: '9020',       // staff PIN for /control + /checkin (auto-unlock, no prompt)
 
@@ -76,7 +77,6 @@ window.OM_CONFIG = {
   if (!env) return;
   if (env.WEB_APP_URL) window.OM_CONFIG.WEB_APP_URL = env.WEB_APP_URL;
   if (env.CSV_URL) window.OM_CONFIG.CSV_URL = env.CSV_URL;
-  if (env.PULL_CSV_URL) window.OM_CONFIG.PULL_CSV_URL = env.PULL_CSV_URL;
   if (env.TOKEN) window.OM_CONFIG.TOKEN = env.TOKEN;
   if (env.DEFAULT_PIN) window.OM_CONFIG.DEFAULT_PIN = env.DEFAULT_PIN;
   if (env.TIMEZONE) window.OM_CONFIG.TIMEZONE = env.TIMEZONE;

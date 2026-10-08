@@ -8,7 +8,6 @@
      OM_API_TOKEN   → window.OM_ENV.TOKEN        (the Apps Script doGet/doPost key)
      OM_WEBAPP_URL  → window.OM_ENV.WEB_APP_URL  (override the baked URL, if ever needed)
      OM_CSV_URL     → window.OM_ENV.CSV_URL      (override the baked published-CSV feed)
-     OM_PULL_CSV_URL → window.OM_ENV.PULL_CSV_URL (override the Employee Scorecard feed)
      OM_STAFF_PIN   → window.OM_ENV.DEFAULT_PIN  (override the baked staff PIN)
      OM_TIMEZONE    → window.OM_ENV.TIMEZONE     (override the fleet timezone)
    ============================================================ */
@@ -19,7 +18,6 @@ var path = require('path');
 var env = {};
 if (process.env.OM_WEBAPP_URL) env.WEB_APP_URL = process.env.OM_WEBAPP_URL;
 if (process.env.OM_CSV_URL) env.CSV_URL = process.env.OM_CSV_URL;
-if (process.env.OM_PULL_CSV_URL) env.PULL_CSV_URL = process.env.OM_PULL_CSV_URL;
 if (process.env.OM_API_TOKEN) env.TOKEN = process.env.OM_API_TOKEN;
 if (process.env.OM_STAFF_PIN) env.DEFAULT_PIN = process.env.OM_STAFF_PIN;
 if (process.env.OM_TIMEZONE) env.TIMEZONE = process.env.OM_TIMEZONE;
