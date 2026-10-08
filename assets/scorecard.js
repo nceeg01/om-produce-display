@@ -26,7 +26,6 @@
   var REFRESH_MS = (cfg.refreshTv || 10) * 1000;
   var ROTATE_MS = 10000;
   var RETRY_MS = 2000;         // after an empty/partial feed, re-check this soon
-  var MIN_ROW_VH = 0.016;      // paginate only if rows would get smaller than this (~17px @1080) — keep everyone on one page
 
   OM.kiosk();
 
@@ -288,6 +287,7 @@
     wrap.appendChild(table);
     paginate();
     fillPage();
+    requestAnimationFrame(function () { if (table) fit(); });   // re-fit once layout has settled
   }
 
   function fillPage() {
@@ -317,34 +317,35 @@
 
   function narrow() { return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
 
-  /* How many rows per page: all of them unless rows would get too small,
-     then the fewest equal pages that keep rows ≥ MIN_ROW_PX. */
+  /* Everyone on ONE screen, always — never split into rotating pages. */
   function paginate() {
-    var n = model.rows.length;
-    if (narrow()) { pageSize = n; page = 0; return; }
-    var avail = wrap.clientHeight - Math.max(40, wrap.clientHeight * 0.07);
-    var fits = Math.max(1, Math.floor(avail / Math.max(14, window.innerHeight * MIN_ROW_VH)));
-    var pages = Math.ceil(n / fits);
-    pageSize = Math.ceil(n / pages);
-    if (page * pageSize >= n) page = 0;
+    pageSize = model.rows.length;
+    page = 0;
   }
 
-  /* Size font + row height so header + this page's rows fill the space. */
+  /* Shrink the whole table (header + every row) until it fits the height the
+     TV gives us, then grow the rows to fill any leftover space. This fits all
+     employees on one screen no matter how short the window is (a windowed
+     browser with tabs + bookmarks + taskbar, or a true full-screen TV). */
   function fit() {
     if (!table) return;
     var trs = table.tBodies[0].rows;
-    if (narrow()) {
-      table.style.fontSize = '';
-      Array.prototype.forEach.call(trs, function (tr) { tr.style.height = ''; });
-      return;
-    }
-    var H = wrap.clientHeight, n = Math.max(trs.length, 1);
-    var fs = Math.max(11, Math.min(36, H / (n + 2.4) * 0.58));
-    for (var pass = 0; pass < 2; pass++) {
+    function clearH() { Array.prototype.forEach.call(trs, function (tr) { tr.style.height = ''; }); }
+    if (narrow()) { table.style.fontSize = ''; clearH(); return; }
+    var H = wrap.clientHeight;
+    if (!H) return;
+    clearH();                                   // natural heights while we measure
+    var fs = Math.min(40, H / 14);              // start big for real TVs
+    table.style.fontSize = fs + 'px';
+    var guard = 0;
+    while (table.offsetHeight > H && fs > 6 && guard++ < 80) {
+      fs = Math.max(6, fs * Math.max(0.6, H / table.offsetHeight) - 0.3);
       table.style.fontSize = fs + 'px';
-      var rowH = (H - table.tHead.offsetHeight - 2) / n;
-      Array.prototype.forEach.call(trs, function (tr) { tr.style.height = rowH + 'px'; });
-      fs = Math.max(11, Math.min(36, rowH * 0.58));
+    }
+    var extra = H - table.offsetHeight;         // fill leftover space evenly
+    if (extra > 2 && trs.length) {
+      var add = extra / trs.length;
+      Array.prototype.forEach.call(trs, function (tr) { tr.style.height = (tr.offsetHeight + add) + 'px'; });
     }
   }
 
