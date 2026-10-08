@@ -112,7 +112,7 @@ from `/control` and `/checkin` when the script enforces a token:
 
 1. In the Vercel project → **Settings → Environment Variables**, add `OM_API_TOKEN` = your
    Apps Script `API_TOKEN` (the same value as the sheet's Script Property). *(Optional:
-   `OM_WEBAPP_URL`, `OM_CSV_URL`, `OM_PULL_CSV_URL`, `OM_STAFF_PIN` to override the baked URL / feeds / PIN.)*
+   `OM_WEBAPP_URL`, `OM_CSV_URL`, `OM_STAFF_PIN` to override the baked URL / feed / PIN.)*
 2. **Redeploy.** The build (`scripts/gen-env.js`, wired via `vercel.json`'s `buildCommand`)
    writes `assets/env.js` from those vars, and `config.js` merges them onto `OM_CONFIG`.
 
@@ -125,8 +125,8 @@ dev. To re-point the fleet permanently, edit the constants at the top of `config
 
 ## Employee Scorecard (`/order-pulling-dashboard`)
 
-Shows the published **EMPLOYEE SCORECARD** tab (`PULL_CSV_URL` in `assets/config.js`;
-override with the `OM_PULL_CSV_URL` env var) **as is**: the sheet's title, headers, values
+Shows the published **EMPLOYEE SCORECARD** tab (`PULL_CSV_URL` in `assets/config.js` —
+always that link; there is no env-var or URL override) **as is**: the sheet's title, headers, values
 and row order, nothing added. The tab holds two tables (a **TOTALS** block on top, then the
 **EMPLOYEE SCORECARD**); the screen splits them at their header rows and shows only the
 per-employee table. Columns added in the sheet show up automatically.
@@ -143,7 +143,6 @@ per-employee table. Columns added in the sheet show up automatically.
 - Rows and text scale so every employee fits the TV; if the list ever outgrows the screen
   it pages every 10s. Refreshes every `REFRESH_TV` seconds (only re-draws when the data changed).
 - If the sheet can't be reached it keeps the last table and shows a small red note.
-- `?demo=1` shows sample data.
 
 ## Daily use
 

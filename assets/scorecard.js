@@ -1,40 +1,43 @@
 /* ============================================================
    OM Produce — Employee Scorecard (warehouse TV, /order-pulling-dashboard)
    ------------------------------------------------------------
-   Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL) as the sheet
-   has it: same title, headers and values — nothing added. Headers carry a
-   Spanish line under the English. Every column sorts on click/tap (again
-   to flip); the choice is remembered on that TV. Default: Cases, most
-   first (?sort=<column> &dir=asc|desc, or ?sort=none for sheet order).
-   The tab also holds a TOTALS block above the scorecard; only the
-   per-employee table is shown. The only styling rule is the sheet's
-   colour scale on the utilisation column (header containing "Util"):
+   Shows the published scorecard tab (OM_CONFIG.PULL_CSV_URL — always that
+   one Google Sheets link, no overrides) as the sheet has it: same title,
+   headers and values — nothing added. Headers carry a Spanish line under
+   the English. Every column sorts on click/tap (again to flip); the choice
+   is remembered on that TV. Default: Cases, most first (?sort=<column>
+   &dir=asc|desc, or ?sort=none for sheet order). The tab also holds a
+   TOTALS block above the scorecard; only the per-employee table is shown.
+   The only styling rule is the sheet's colour scale on the utilisation
+   column (header containing "Util"):
        ≥ 70% green · ≥ 50% yellow · below red      (?good=70&warn=50)
-   Rows and font scale so the whole table fits the TV; if it ever can't
-   fit, it pages every 10s. ?demo=1 shows sample data.
+   Every employee is shown on one screen; text scales to fit.
    ============================================================ */
 (function () {
   'use strict';
   var cfg = getConfig();
   var qs = new URLSearchParams(location.search);
-  var CSV_URL = (qs.get('csv') || cfg.pullCsvUrl || '').trim();
-  var DEMO = qs.get('demo') === '1' || !CSV_URL;
+  var CSV_URL = (cfg.pullCsvUrl || '').trim();   // the one baked-in Google Sheets feed
   var GOOD = num(qs.get('good'), 70);
   var WARN = num(qs.get('warn'), 50);
   var SORT_KEY = 'om_scorecard_sort';
-  var DATA_KEY = 'om_scorecard_data';   // last COMPLETE table, so a reload is never blank
+  var DATA_KEY = 'om_scorecard_v2';     // last good table (new key: drops copies saved by the old logic)
   var REFRESH_MS = (cfg.refreshTv || 10) * 1000;
   var ROTATE_MS = 10000;
-  var RETRY_MS = 2000;         // after an empty/partial feed, re-check this soon
+  var RETRY_MS = 2000;         // after an empty/broken read, re-check this soon
+  var raf = window.requestAnimationFrame || function (f) { return setTimeout(f, 30); };  // older TV browsers
 
   OM.kiosk();
+  try { localStorage.removeItem('om_scorecard_data'); } catch (e) {}   // stale cache from the old logic
 
   var wrap = document.getElementById('wrap');
   var note = document.getElementById('note');
   var titleEl = document.getElementById('title');
   var table = null, lastText = null, model = null, page = 0, pageSize = 0, lastOk = 0;
-  var lastGoodRows = 0;       // row count of the last table we trusted
-  var pending = null;         // a smaller/empty read, held until a 2nd identical read confirms it is real
+  var lastMod = 0;            // Last-Modified of the table on screen, when Google sends one
+  var superseded = {};        // copies we already moved past → when; skipped for a while (stale server caches)
+  var lastSeenCurrent = 0;    // last time the feed returned the table on screen
+  var SKIP_OLD_MS = 10 * 60000, CURRENT_GONE_MS = 60000;
   var sort = initialSort();   // { col: header text or '' (sheet order), dir: 'asc' | 'desc' }
 
   function num(v, d) { var n = parseFloat(v); return isNaN(n) ? d : n; }
@@ -287,7 +290,7 @@
     wrap.appendChild(table);
     paginate();
     fillPage();
-    requestAnimationFrame(function () { if (table) fit(); });   // re-fit once layout has settled
+    raf(function () { if (table) fit(); });   // re-fit once layout has settled
   }
 
   function fillPage() {
@@ -332,8 +335,11 @@
     var trs = table.tBodies[0].rows;
     function clearH() { Array.prototype.forEach.call(trs, function (tr) { tr.style.height = ''; }); }
     if (narrow()) { table.style.fontSize = ''; clearH(); return; }
-    var H = wrap.clientHeight;
-    if (!H) return;
+    // Height actually visible below the title — capped to the screen, so a TV
+    // browser that mis-sizes the flex box still fits everything on the glass.
+    var vis = Math.floor(window.innerHeight - wrap.getBoundingClientRect().top - 6);
+    var H = wrap.clientHeight ? Math.min(wrap.clientHeight, vis) : vis;
+    if (!H || H < 60) return;
     clearH();                                   // natural heights while we measure
     var fs = Math.min(40, H / 14);              // start big for real TVs
     table.style.fontSize = fs + 'px';
@@ -349,45 +355,61 @@
     }
   }
 
-  /* ── Deciding whether a fetched table is the real, whole scorecard ──
-     The published-CSV feed is cached across Google's servers and lags a
-     few minutes behind edits, so a given fetch can come back empty, half
-     written, or showing only the TOTALS block. We only ADOPT a fetch that
-     looks like the complete employee table; anything smaller is held and
-     only accepted once a second identical fetch confirms it (a real
-     shrink, e.g. someone left), so a transient partial never wipes the
-     board. Until then the last good table stays up. */
-  function looksComplete(m) {
+  /* ── Which fetched tables to show ───────────────────────────
+     Show every valid read of the employee table, so the newest sheet data
+     always wins (the same rule as the version that ran fine before). Only
+     plainly broken reads are ignored — an empty body, a login/redirect
+     page, or a CSV holding just the TOTALS block — and the last good table
+     stays up while we re-check in 2s.
+     Right after the sheet changes, Google's servers can hand back the old
+     and new copies in turn for a few minutes. So once we have moved on from
+     a copy we don't step back to it for 10 minutes — unless the copy on
+     screen stops coming back for a full minute (e.g. an edit was undone),
+     in which case we follow what the sheet actually serves. When Google
+     sends a Last-Modified date, an older copy is skipped outright. */
+  function isValid(m) {
     if (!m || !m.rows.length) return false;
     var h0 = (m.head[0] || '').toLowerCase();
-    if (/^total/.test(h0) || /^totals?\b/.test((m.title || '').toLowerCase())) return false; // grabbed the TOTALS block
-    if (m.rows.length < 3) return false;                       // too few to be the scorecard
-    if (lastGoodRows && m.rows.length < lastGoodRows * 0.6) return false; // suspicious shrink → confirm first
-    return true;
+    return !(/^total/.test(h0) || /^totals?\b/.test((m.title || '').toLowerCase()));
   }
 
-  function saveData(text, rows) {
-    try { localStorage.setItem(DATA_KEY, JSON.stringify({ text: text, rows: rows, ts: Date.now() })); } catch (e) {}
+  /* Short fingerprint of a CSV copy (so we remember copies, not whole sheets). */
+  function fp(t) {
+    var h = 5381;
+    for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+    return h + ':' + t.length;
   }
 
-  function adopt(m, text) {
-    pending = null;
+  function saveData(text, mod) {
+    try { localStorage.setItem(DATA_KEY, JSON.stringify({ text: text, mod: mod, ts: Date.now(), sup: superseded })); } catch (e) {}
+  }
+
+  function adopt(m, text, mod) {
+    var now = Date.now();
+    if (lastText && lastText !== text) superseded[fp(lastText)] = now;
+    for (var k in superseded) if (now - superseded[k] > SKIP_OLD_MS) delete superseded[k];
+    lastSeenCurrent = now;
     lastText = text;
-    lastGoodRows = m.rows.length;
+    lastMod = mod || 0;
     model = m;
-    saveData(text, m.rows.length);
+    saveData(text, lastMod);
     applySort();
     render();
   }
 
-  /* Render the last complete table saved on THIS TV, instantly, so a reload
-     is never blank while the first live fetch is still in flight. */
+  /* Render the last good table saved on THIS TV, instantly, so a reload is
+     never blank while the first live fetch is still in flight. */
   function hydrateFromCache() {
     try {
       var c = JSON.parse(localStorage.getItem(DATA_KEY) || 'null');
       if (c && c.text) {
         var m = toModel(c.text);
-        if (m && m.rows.length) { lastText = c.text; lastGoodRows = m.rows.length; lastOk = c.ts || Date.now(); model = m; applySort(); render(); return true; }
+        if (isValid(m)) {
+          lastText = c.text; lastMod = c.mod || 0; lastOk = c.ts || Date.now();
+          superseded = (c.sup && typeof c.sup === 'object') ? c.sup : {};
+          lastSeenCurrent = Date.now();     // grace: give the saved table a minute before an older copy can replace it
+          model = m; applySort(); render(); return true;
+        }
       }
     } catch (e) {}
     return false;
@@ -398,47 +420,42 @@
   function retrySoon() { clearTimeout(retryT); retryT = setTimeout(load, RETRY_MS); }
 
   function load() {
-    if (inflight) return;
+    if (inflight || !CSV_URL) return;
     inflight = true;
-    var p = DEMO ? Promise.resolve(demoCsv()) :
-      OM.fetchWithTimeout(CSV_URL + (CSV_URL.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now(), 12000, { cache: 'no-store' })
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.text();
-        });
-    p.then(function (text) {
-      if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('sheet is not published as CSV'); // got a login/redirect page
-      lastOk = Date.now();
-      note.classList.remove('err');
-      if (text === lastText && model) { pending = null; pageNote(); return; }   // unchanged — no re-render
-
-      var m = toModel(text);
-      if (looksComplete(m)) { adopt(m, text); return; }          // a whole, trustworthy table → show it
-
-      // Empty / partial / smaller-than-expected read.
-      if (m && m.rows.length && pending && pending.text === text) {
-        adopt(m, text);                                          // confirmed twice → it is real (a genuine shrink)
-        return;
-      }
-      pending = (m && m.rows.length) ? { text: text } : null;    // hold it; wait for confirmation
-      if (!model) {                                              // cold load, nothing to show yet → keep trying fast
-        showLoading();
+    var mod = 0;
+    OM.fetchWithTimeout(CSV_URL + (CSV_URL.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now(), 12000, { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var lm = r.headers && r.headers.get('last-modified');
+        mod = lm ? (Date.parse(lm) || 0) : 0;
+        return r.text();
+      })
+      .then(function (text) {
+        if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('sheet is not published as CSV'); // login/redirect page
+        lastOk = Date.now();
+        note.classList.remove('err');
+        var now = Date.now();
+        if (text === lastText && model) { lastSeenCurrent = now; pageNote(); return; }   // unchanged
+        if (mod && lastMod && mod < lastMod) { pageNote(); return; }     // older server copy — keep the newer one
+        var sup = superseded[fp(text)];
+        if (sup && now - sup < SKIP_OLD_MS &&
+            now - lastSeenCurrent < CURRENT_GONE_MS) { pageNote(); return; } // a copy we already moved past
+        var m = toModel(text);
+        if (isValid(m)) { adopt(m, text, mod); return; }                 // newest valid data → show it
+        if (!model) showLoading(); else pageNote();                      // broken read → keep what's up
         retrySoon();
-      } else {
-        pageNote();                                              // keep the good board up; re-check soon
+      })
+      .catch(function (err) {
+        var why = (err && err.name === 'AbortError') ? 'timed out' : ((err && err.message) || 'failed');
+        if (!model) {
+          showLoading(why);
+        } else {
+          note.classList.add('err');
+          note.textContent = 'Sheet unreachable (' + why + ') — showing ' + OM.fmtTime(lastOk);
+        }
         retrySoon();
-      }
-    }).catch(function (err) {
-      var why = (err && err.name === 'AbortError') ? 'timed out' : ((err && err.message) || 'failed');
-      if (!model) {
-        showLoading(why);
-        retrySoon();
-      } else {
-        note.classList.add('err');
-        note.textContent = 'Sheet unreachable (' + why + ') — showing ' + OM.fmtTime(lastOk);
-        retrySoon();
-      }
-    }).then(function () { inflight = false; });
+      })
+      .then(function () { inflight = false; });
   }
 
   function showLoading(why) {
@@ -469,46 +486,6 @@
     fillPage();
   }, ROTATE_MS);
   window.addEventListener('resize', function () { if (model) { paginate(); fillPage(); } });
-  if (!DEMO) hydrateFromCache();   // show the last complete table instantly; the fetch below refreshes it
+  hydrateFromCache();   // show the last good table instantly; the fetch below refreshes it
   load();
-
-  /* ── Demo (?demo=1) — laid out like the published tab ────── */
-  function demoCsv() {
-    return [
-      'TOTALS = THE 28 ORDER PULLERS LISTED BELOW (NON-PULLERS EXCLUDED),,,,,,,,',
-      'Total Cases,Total Stops,Payroll Hrs,Productive Hrs,Productive Util %,Cases / Payroll Hr,Cases / Productive Hr,Cases Sent Back,"Mistakes / 1,000 Cases"',
-      '"81,882","1,155","1,447.00",988,68.30%,56.6,82.9,#VALUE!,0',
-      ',,,,,,,,',
-      'EMPLOYEE SCORECARD,,,,,,,,',
-      'Employee,Shift,Cases,Stops,Payroll Hrs,Productive Hrs,Productive Util %,Cases / Payroll Hr,Mistakes (items)',
-      'YASNIEL,Day,"3,357",43,52.7,39.3,74.5%,63.7,13',
-      'JAIRO,Night,"3,307",38,49.7,38.6,77.7%,66.5,3',
-      'BERNARDO,Night,"3,520",44,54.1,43.8,81.0%,65.1,7',
-      'AMADEO,Night,"2,152",34,63.4,25.5,40.3%,34.0,17',
-      'FRANCISCO,Night,"3,866",47,55.0,42.0,76.3%,70.3,15',
-      'LUIS,Night,"3,732",41,53.6,43.9,81.8%,69.6,14',
-      'MARCOS,Night,"3,955",48,56.8,41.1,72.5%,69.7,26',
-      'CARLOS R,Night,"2,941",36,56.5,36.2,64.1%,52.1,37',
-      'BRYAN,Night,"1,822",29,22.0,21.6,98.3%,82.9,11',
-      'ULISES,Night,"3,187",45,53.0,39.0,73.6%,60.1,21',
-      'JOSE A.,Night,"1,709",31,52.6,20.4,38.8%,32.5,27',
-      'JACKSON,Night,"3,136",42,53.3,41.0,77.0%,58.9,4',
-      'CARLO,Night,"3,994",47,55.0,41.5,75.5%,72.7,13',
-      'EMILIANO,Night,"2,554",39,51.2,38.4,75.0%,49.9,6',
-      'MIGUEL Z,Night,"3,496",50,50.4,31.9,63.3%,69.4,22',
-      'DAVID,Night,"4,946",39,52.4,40.9,78.1%,94.4,9',
-      'EDWIN,Night,"3,510",53,51.9,40.6,78.2%,67.6,22',
-      'PAUL ALVAREZ,Day,"2,420",38,42.6,32.2,75.6%,56.8,19',
-      'ALEXANDER,Night,"2,970",45,49.7,36.1,72.7%,59.7,27',
-      'JOSE M,Night,"3,182",42,56.3,44.2,78.5%,56.5,16',
-      'ALFREDO,Night,"3,358",54,51.2,37.9,74.1%,65.6,26',
-      'NESTOR,Night,"1,356",28,51.3,21.0,40.9%,26.4,13',
-      'MAURICIO,Day,"2,834",43,52.9,44.2,83.6%,53.5,18',
-      'EDDI,Night,"2,623",61,52.1,36.6,70.2%,50.4,27',
-      'JONATHAN,Night,"1,240",31,52.8,30.8,58.3%,23.5,6',
-      'DEZMOND,Night,"2,250",44,51.0,28.1,55.0%,44.1,12',
-      'DANII,Day,845,22,48.2,12.8,26.6%,17.5,13',
-      'HECTOR,Day,"3,621",41,55.4,38.4,69.3%,65.3,22',
-    ].join('\n');
-  }
 })();
