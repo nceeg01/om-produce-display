@@ -22,9 +22,11 @@
   var GOOD = num(qs.get('good'), 70);
   var WARN = num(qs.get('warn'), 50);
   var SORT_KEY = 'om_scorecard_sort';
+  var DATA_KEY = 'om_scorecard_data';   // last COMPLETE table, so a reload is never blank
   var REFRESH_MS = (cfg.refreshTv || 10) * 1000;
   var ROTATE_MS = 10000;
-  var MIN_ROW_VH = 0.028;      // smallest row before paging (~30px on a 1080p TV)
+  var RETRY_MS = 2000;         // after an empty/partial feed, re-check this soon
+  var MIN_ROW_VH = 0.016;      // paginate only if rows would get smaller than this (~17px @1080) — keep everyone on one page
 
   OM.kiosk();
 
@@ -32,6 +34,8 @@
   var note = document.getElementById('note');
   var titleEl = document.getElementById('title');
   var table = null, lastText = null, model = null, page = 0, pageSize = 0, lastOk = 0;
+  var lastGoodRows = 0;       // row count of the last table we trusted
+  var pending = null;         // a smaller/empty read, held until a 2nd identical read confirms it is real
   var sort = initialSort();   // { col: header text or '' (sheet order), dir: 'asc' | 'desc' }
 
   function num(v, d) { var n = parseFloat(v); return isNaN(n) ? d : n; }
@@ -319,7 +323,7 @@
     var n = model.rows.length;
     if (narrow()) { pageSize = n; page = 0; return; }
     var avail = wrap.clientHeight - Math.max(40, wrap.clientHeight * 0.07);
-    var fits = Math.max(1, Math.floor(avail / Math.max(22, window.innerHeight * MIN_ROW_VH)));
+    var fits = Math.max(1, Math.floor(avail / Math.max(14, window.innerHeight * MIN_ROW_VH)));
     var pages = Math.ceil(n / fits);
     pageSize = Math.ceil(n / pages);
     if (page * pageSize >= n) page = 0;
@@ -344,8 +348,54 @@
     }
   }
 
+  /* ── Deciding whether a fetched table is the real, whole scorecard ──
+     The published-CSV feed is cached across Google's servers and lags a
+     few minutes behind edits, so a given fetch can come back empty, half
+     written, or showing only the TOTALS block. We only ADOPT a fetch that
+     looks like the complete employee table; anything smaller is held and
+     only accepted once a second identical fetch confirms it (a real
+     shrink, e.g. someone left), so a transient partial never wipes the
+     board. Until then the last good table stays up. */
+  function looksComplete(m) {
+    if (!m || !m.rows.length) return false;
+    var h0 = (m.head[0] || '').toLowerCase();
+    if (/^total/.test(h0) || /^totals?\b/.test((m.title || '').toLowerCase())) return false; // grabbed the TOTALS block
+    if (m.rows.length < 3) return false;                       // too few to be the scorecard
+    if (lastGoodRows && m.rows.length < lastGoodRows * 0.6) return false; // suspicious shrink → confirm first
+    return true;
+  }
+
+  function saveData(text, rows) {
+    try { localStorage.setItem(DATA_KEY, JSON.stringify({ text: text, rows: rows, ts: Date.now() })); } catch (e) {}
+  }
+
+  function adopt(m, text) {
+    pending = null;
+    lastText = text;
+    lastGoodRows = m.rows.length;
+    model = m;
+    saveData(text, m.rows.length);
+    applySort();
+    render();
+  }
+
+  /* Render the last complete table saved on THIS TV, instantly, so a reload
+     is never blank while the first live fetch is still in flight. */
+  function hydrateFromCache() {
+    try {
+      var c = JSON.parse(localStorage.getItem(DATA_KEY) || 'null');
+      if (c && c.text) {
+        var m = toModel(c.text);
+        if (m && m.rows.length) { lastText = c.text; lastGoodRows = m.rows.length; lastOk = c.ts || Date.now(); model = m; applySort(); render(); return true; }
+      }
+    } catch (e) {}
+    return false;
+  }
+
   /* ── Load loop ───────────────────────────────────────────── */
-  var inflight = false;
+  var inflight = false, retryT = null;
+  function retrySoon() { clearTimeout(retryT); retryT = setTimeout(load, RETRY_MS); }
+
   function load() {
     if (inflight) return;
     inflight = true;
@@ -356,29 +406,46 @@
           return r.text();
         });
     p.then(function (text) {
-      if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('sheet is not published as CSV');
+      if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('sheet is not published as CSV'); // got a login/redirect page
       lastOk = Date.now();
       note.classList.remove('err');
-      if (text === lastText && model) { pageNote(); return; }   // unchanged — no re-render
+      if (text === lastText && model) { pending = null; pageNote(); return; }   // unchanged — no re-render
+
       var m = toModel(text);
-      if (!m) throw new Error('no table found in the sheet');
-      lastText = text;
-      model = m;
-      applySort();
-      render();
+      if (looksComplete(m)) { adopt(m, text); return; }          // a whole, trustworthy table → show it
+
+      // Empty / partial / smaller-than-expected read.
+      if (m && m.rows.length && pending && pending.text === text) {
+        adopt(m, text);                                          // confirmed twice → it is real (a genuine shrink)
+        return;
+      }
+      pending = (m && m.rows.length) ? { text: text } : null;    // hold it; wait for confirmation
+      if (!model) {                                              // cold load, nothing to show yet → keep trying fast
+        showLoading();
+        retrySoon();
+      } else {
+        pageNote();                                              // keep the good board up; re-check soon
+        retrySoon();
+      }
     }).catch(function (err) {
       var why = (err && err.name === 'AbortError') ? 'timed out' : ((err && err.message) || 'failed');
       if (!model) {
-        wrap.innerHTML = '';
-        var m = el('div', 'msg');
-        m.appendChild(el('b', null, 'Can’t reach the scorecard sheet'));
-        m.appendChild(el('div', null, why + ' — retrying automatically'));
-        wrap.appendChild(m);
+        showLoading(why);
+        retrySoon();
       } else {
         note.classList.add('err');
         note.textContent = 'Sheet unreachable (' + why + ') — showing ' + OM.fmtTime(lastOk);
+        retrySoon();
       }
     }).then(function () { inflight = false; });
+  }
+
+  function showLoading(why) {
+    wrap.innerHTML = '';
+    var m = el('div', 'msg');
+    m.appendChild(el('b', null, why ? 'Reconnecting to the scorecard sheet' : 'Loading…'));
+    if (why) m.appendChild(el('div', null, why + ' — retrying automatically'));
+    wrap.appendChild(m);
   }
 
   /* Hide the mouse pointer after 4s without movement so it doesn't sit on
@@ -401,6 +468,7 @@
     fillPage();
   }, ROTATE_MS);
   window.addEventListener('resize', function () { if (model) { paginate(); fillPage(); } });
+  if (!DEMO) hydrateFromCache();   // show the last complete table instantly; the fetch below refreshes it
   load();
 
   /* ── Demo (?demo=1) — laid out like the published tab ────── */
