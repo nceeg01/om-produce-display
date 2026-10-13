@@ -1,5 +1,12 @@
 # OM Produce — Display System
 
+> **🧪 AIRTABLE TEST BRANCH** — on this branch the database is an **Airtable base**
+> instead of the Google Sheet: reads and writes go through the Vercel serverless
+> function [`api/orders.js`](api/orders.js), a drop-in replacement for the Apps Script
+> Web App (same contract, so no screen changed). Setup, full spec, and rollback steps:
+> **[docs/AIRTABLE_SETUP.md](docs/AIRTABLE_SETUP.md)**. The README below still
+> describes the Google Sheets architecture from `main`.
+
 Real-time order display for a produce pickup operation. A **Google Sheet** is the
 database; a static **Vercel** app renders the screens. No external server, no build step,
 no framework. Two independent read paths mean the displays are **permanently connected —
