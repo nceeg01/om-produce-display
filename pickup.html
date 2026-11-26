@@ -62,6 +62,64 @@
       .qname { font-size: 24px; }
     }
   </style>
+  <style>
+    /* ── Christmas theme ─────────────────────────────────────────
+       Active only while <html> has .xmas (set below: Nov 20 → Jan 6,
+       fleet timezone). Outside the season the page looks exactly as before.
+       To remove: delete this <style> block, the .xmas-* elements, and the
+       two "Christmas theme" scripts. */
+    .xmas-greet, .xmas-lights, .xmas-snow, .xmas-drift { display: none; }
+
+    /* Greeting, centred in the top bar */
+    .xmas .xmas-greet { display: flex; align-items: center; gap: .45em; margin-left: auto; white-space: nowrap; font-family: var(--f-head); font-size: clamp(20px, 1.7vw, 34px); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .xmas-greet .r { color: #C62828; }
+    .xmas-greet .g { color: #1B6B3A; }
+    .xmas-greet .amp { color: #C9A227; font-weight: 700; }
+    .xmas-greet .sf { color: #8DB9DA; font-size: .8em; }
+
+    /* String of twinkling lights hanging from the top bar's orange line */
+    .xmas .topbar { position: relative; z-index: 6; }
+    .xmas .xmas-lights { display: block; position: absolute; left: 0; right: 0; top: calc(100% + 1px); height: 20px; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24'%3E%3Cpath d='M0 1 Q24 14 48 1' fill='none' stroke='%23234A2B' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x 0 0; }
+    .bulb { position: absolute; top: 6px; width: 9px; height: 12px; border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%; animation: twinkle 2.2s ease-in-out infinite; }
+    .bulb::before { content: ''; position: absolute; top: -3px; left: 1.5px; width: 6px; height: 4px; border-radius: 1px; background: #234A2B; }
+    .bulb.c0 { background: #E53935; box-shadow: 0 2px 10px 2px rgba(229,57,53,.55); }
+    .bulb.c1 { background: #2E9E4A; box-shadow: 0 2px 10px 2px rgba(46,158,74,.55);  animation-duration: 2.6s; }
+    .bulb.c2 { background: #F9C623; box-shadow: 0 2px 10px 2px rgba(249,198,35,.6);  animation-duration: 1.9s; }
+    .bulb.c3 { background: #1E88E5; box-shadow: 0 2px 10px 2px rgba(30,136,229,.55); animation-duration: 2.9s; }
+    @keyframes twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+    /* "Now Ready" hero → evergreen night with falling snow */
+    .xmas .ns { background: radial-gradient(ellipse at 50% 40%, #1F6B44 0%, #145232 55%, #0B3520 100%); border-right-color: #0B3520; }
+    .xmas .ns::before { height: 6px; z-index: 2; background: repeating-linear-gradient(-45deg, #C62828 0 12px, #fff 12px 24px); }
+    .xmas .ns > .ns-eyebrow, .xmas .ns > #ns-content { position: relative; z-index: 2; }
+    .xmas .ns-eyebrow { color: #F5D06A; }
+    .xmas .ns-eyebrow::before, .xmas .ns-eyebrow::after { background: rgba(245,208,106,.45); }
+    .xmas #ns-name { color: #fff; text-shadow: 0 3px 18px rgba(0,0,0,.35); }
+    .xmas .ns-ready-tag { background: #C62828; box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 8px 24px rgba(0,0,0,.25); }
+    .xmas .ns-empty .eicon { opacity: 1; font-size: 0; }
+    .xmas .ns-empty .eicon::after { content: '🎄'; font-size: 64px; }
+    .xmas .ns-empty h2 { color: rgba(255,255,255,.92); }
+    .xmas .ns-empty p { color: rgba(255,255,255,.7); }
+
+    .xmas .xmas-snow { display: block; position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+    .flake { position: absolute; top: -28px; border-radius: 50%; background: #fff; will-change: transform; animation: xfall0 14s linear infinite; }
+    .flake.glyph { background: none; border-radius: 0; color: #fff; line-height: 1; }
+    @keyframes xfall0 { from { transform: translate3d(0, 0, 0); }  50% { transform: translate3d(22px, 55vh, 0); }  to { transform: translate3d(-6px, 112vh, 0); } }
+    @keyframes xfall1 { from { transform: translate3d(0, 0, 0); }  50% { transform: translate3d(-20px, 55vh, 0); } to { transform: translate3d(10px, 112vh, 0); } }
+    @keyframes xfall2 { from { transform: translate3d(0, 0, 0); }  50% { transform: translate3d(8px, 55vh, 0); }   to { transform: translate3d(30px, 112vh, 0); } }
+
+    .xmas .xmas-drift { display: block; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; z-index: 1; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 56' preserveAspectRatio='none'%3E%3Cpath d='M0 26 Q40 8 90 24 T190 20 T290 28 T400 14 V56 H0Z' fill='%23DCEBF5'/%3E%3Cpath d='M0 38 Q60 22 120 36 T240 32 T330 40 T400 30 V56 H0Z' fill='%23fff'/%3E%3C/svg%3E") no-repeat bottom / 100% 100%; }
+
+    @media (max-width: 1100px) { .xmas .xmas-greet { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .xmas .xmas-snow { display: none; } .bulb { animation: none; } }
+  </style>
+  <script>
+    /* Christmas theme — early season check (device clock) so the first paint is already festive. */
+    (function () {
+      var d = new Date(), m = d.getMonth() + 1, day = d.getDate();
+      if ((m === 11 && day >= 20) || m === 12 || (m === 1 && day <= 6)) document.documentElement.className += ' xmas';
+    })();
+  </script>
 </head>
 <body>
   <div class="ov" id="ov" style="display:none">
@@ -78,6 +136,8 @@
       <img class="logo-img" src="https://omproduce.com/wp-content/uploads/om-produce-logo.webp" alt="OM Produce">
     </div>
     <div class="screen-tag">🛒 Customer Pickup</div>
+    <div class="xmas-greet" aria-hidden="true"><span class="sf">❄</span><span class="r">Merry Christmas</span><span class="amp">&amp;</span><span class="g">Happy New Year</span><span class="sf">❄</span></div>
+    <div class="xmas-lights" id="xmas-lights" aria-hidden="true"></div>
     <div class="tb-right">
       <div class="live-pill" id="lpill"><div class="ldot"></div><span id="ltxt">LIVE</span></div>
       <div class="clock-wrap"><div class="clock big" id="clk">--:--</div><div class="dateline" id="dln">—</div></div>
@@ -91,6 +151,8 @@
 
   <div class="main">
     <div class="ns">
+      <div class="xmas-snow" id="xmas-snow" aria-hidden="true"></div>
+      <div class="xmas-drift" aria-hidden="true"></div>
       <div class="ns-eyebrow">Now Ready</div>
       <div id="ns-content"><div class="ns-empty"><div class="eicon">⏳</div><h2>Loading…</h2></div></div>
     </div>
@@ -119,5 +181,75 @@
   <script src="assets/sample.js"></script>
   <script src="assets/api.js"></script>
   <script src="assets/pickup.js"></script>
+  <script>
+    /* Christmas theme — season switch (fleet timezone, server-synced clock),
+       twinkling lights and falling snow. Re-checked every 10 min, so a TV
+       left running switches itself off after Jan 6 with no redeploy. */
+    (function () {
+      'use strict';
+      var root = document.documentElement;
+      var built = false;
+
+      function inSeason() {
+        var p = OM.tzParts(OM.effectiveNow());
+        return (p.mo === 11 && p.d >= 20) || p.mo === 12 || (p.mo === 1 && p.d <= 6);
+      }
+
+      function hangLights() {
+        var host = document.getElementById('xmas-lights');
+        var GAP = 48, n = Math.ceil(window.innerWidth / GAP) + 1;
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < n; i++) {
+          var b = document.createElement('span');
+          b.className = 'bulb c' + (i % 4);
+          b.style.left = (i * GAP + GAP / 2 - 4.5) + 'px';
+          b.style.animationDelay = (-Math.random() * 2.5).toFixed(2) + 's';
+          frag.appendChild(b);
+        }
+        host.innerHTML = '';
+        host.appendChild(frag);
+      }
+
+      function makeSnow() {
+        var host = document.getElementById('xmas-snow');
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < 46; i++) {
+          var f = document.createElement('span');
+          if (i % 6 === 0) {
+            f.className = 'flake glyph';
+            f.textContent = '❄';
+            f.style.fontSize = (14 + Math.random() * 14).toFixed(0) + 'px';
+          } else {
+            var s = (3 + Math.random() * 6).toFixed(1) + 'px';
+            f.className = 'flake';
+            f.style.width = s;
+            f.style.height = s;
+          }
+          var dur = 9 + Math.random() * 10;
+          f.style.left = (Math.random() * 100).toFixed(2) + '%';
+          f.style.opacity = (0.45 + Math.random() * 0.5).toFixed(2);
+          f.style.animationName = 'xfall' + (i % 3);
+          f.style.animationDuration = dur.toFixed(1) + 's';
+          f.style.animationDelay = (-Math.random() * dur).toFixed(1) + 's';
+          frag.appendChild(f);
+        }
+        host.appendChild(frag);
+      }
+
+      function apply() {
+        var on = inSeason();
+        root.classList.toggle('xmas', on);
+        if (on && !built) { built = true; hangLights(); makeSnow(); }
+      }
+
+      var rt;
+      window.addEventListener('resize', function () {
+        clearTimeout(rt);
+        rt = setTimeout(function () { if (built) hangLights(); }, 250);
+      });
+      apply();
+      setInterval(apply, 600000);
+    })();
+  </script>
 </body>
 </html>
